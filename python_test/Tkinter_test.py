@@ -15,7 +15,7 @@ class AityApp(t.Tk):
     def __init__(self):
         super().__init__()
         self.title("AITY AI Agent for text analysing")
-        self.geometry("500x500")
+        self.geometry("600x600")
         self.config(bg="#0b0f3b")
 
 # Store uploaded files and example files
@@ -30,13 +30,13 @@ class AityApp(t.Tk):
         self.example_analysis = {
             "sports.txt": """Keyword        Relevance
 
-                            ice hockey      8%
-                            floor ball      5%
-                            skiing          4.5%
-                            bouldering      3%
-                            dancing         2%
-                            football        1.5%
-                            futsal          1%"""
+ice hockey        8%
+floor ball           5%
+skiing                4.5%
+bouldering       3%
+dancing            2%
+football            1.5%
+futsal                1%"""
         }
 
         self.frames = {}
@@ -63,7 +63,11 @@ class AityApp(t.Tk):
 class Dashboard(t.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#0b0f3b")
-
+        #variables that are used to show how many documents are
+        #uploaded, analysed and ready to compare
+        self.total_docs = t.StringVar(value="0")
+        self.analysed_docs = t.StringVar(value="0")
+        self.ready_to_compare_docs = t.StringVar(value="0")
         # Title
         t.Label(self, text="AITY Dashboard",
                 fg="white", bg="#0b0f3b",
@@ -74,9 +78,9 @@ class Dashboard(t.Frame):
         stats_frame = t.Frame(self, bg="#0b0f3b")
         stats_frame.pack(pady=10)
 
-        self.create_stat(stats_frame, "Total documents", "0")
-        self.create_stat(stats_frame, "Analyzed", "0")
-        self.create_stat(stats_frame, "Ready to compare", "0")
+        self.create_stat(stats_frame, "Total documents", self.total_docs)
+        self.create_stat(stats_frame, "Analyzed", self.analysed_docs)
+        self.create_stat(stats_frame, "Ready to compare", self.ready_to_compare_docs)
 
         # ---- BUTTONS ----
         btn_frame = t.Frame(self, bg="#0b0f3b")
@@ -104,8 +108,12 @@ class Dashboard(t.Frame):
         box.pack_propagate(False)
 
         t.Label(box, text=title, fg="white", bg="#1a1f5a").pack()
-        t.Label(box, text=value, fg="white", bg="#1a1f5a",
-                font=("Arial", 12, "bold")).pack()
+        if isinstance(value, t.StringVar):
+            t.Label(box, textvariable=value, fg="white", bg="#1a1f5a",
+            font=("Arial", 12, "bold")).pack()
+        else:
+            t.Label(box, text=value, fg="white", bg="#1a1f5a",
+            font=("Arial", 12, "bold")).pack()
 
     def clear_content(self):
         for widget in self.content_frame.winfo_children():
@@ -161,6 +169,14 @@ class Dashboard(t.Frame):
         if file:
             self.master.files.append(file)
             print("Saved:", file)
+            current = int(self.total_docs.get())
+            self.total_docs.set(str(current + 1))
+            
+            current = int(self.analysed_docs.get())
+            self.analysed_docs.set(str(current + 1))
+            
+            if int(self.analysed_docs.get()) >= 2:
+                self.ready_to_compare_docs.set("✅")
 
 # -----FILE SELECTION SCREEN----- #
 # Shows both example files and uploaded files
