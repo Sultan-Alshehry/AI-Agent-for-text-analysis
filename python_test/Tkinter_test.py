@@ -17,6 +17,12 @@ class AityApp(t.Tk):
         self.title("AITY AI Agent for text analysing")
         self.geometry("600x600")
         self.config(bg="#0b0f3b")
+        
+        #variables that are used to show how many documents are
+        #uploaded, analysed and ready to compare
+        self.total_docs = t.StringVar(value="0")
+        self.analysed_docs = t.StringVar(value="0")
+        self.ready_to_compare_docs = t.StringVar(value="❌")
 
 # Store uploaded files and example files
         self.files = []
@@ -41,8 +47,8 @@ futsal                1%"""
 
         self.frames = {}
 
-        for F in (Dashboard, FileSelection, Analysis):
-            frame = F(self)
+        for F in (Dashboard, FileSelection, Analysis, Compare):
+            frame = F(self, self.total_docs, self.analysed_docs, self.ready_to_compare_docs)
             self.frames[F] = frame
             frame.place(relwidth=1, relheight=1)
 
@@ -54,6 +60,8 @@ futsal                1%"""
 
         if frame_class == FileSelection:
             frame.refresh_files()  
+        if frame_class == Compare:
+            frame.refresh()
 
         frame.tkraise()
 
@@ -61,13 +69,12 @@ futsal                1%"""
 # Contains stats, navigation buttons etc.
 
 class Dashboard(t.Frame):
-    def __init__(self, master):
+    def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg="#0b0f3b")
-        #variables that are used to show how many documents are
-        #uploaded, analysed and ready to compare
-        self.total_docs = t.StringVar(value="0")
-        self.analysed_docs = t.StringVar(value="0")
-        self.ready_to_compare_docs = t.StringVar(value="0")
+        
+        self.analysed_docs = analysed_docs
+        self.total_docs = total_docs
+        self.ready_compare = ready_compare
         # Title
         t.Label(self, text="AITY Dashboard",
                 fg="white", bg="#0b0f3b",
@@ -78,9 +85,9 @@ class Dashboard(t.Frame):
         stats_frame = t.Frame(self, bg="#0b0f3b")
         stats_frame.pack(pady=10)
 
-        self.create_stat(stats_frame, "Total documents", self.total_docs)
-        self.create_stat(stats_frame, "Analyzed", self.analysed_docs)
-        self.create_stat(stats_frame, "Ready to compare", self.ready_to_compare_docs)
+        self.create_stat(stats_frame, "Total documents", total_docs)
+        self.create_stat(stats_frame, "Analyzed", analysed_docs)
+        self.create_stat(stats_frame, "Ready to compare", ready_compare)
 
         # ---- BUTTONS ----
         btn_frame = t.Frame(self, bg="#0b0f3b")
@@ -93,6 +100,12 @@ class Dashboard(t.Frame):
         t.Button(btn_frame, text="Uploads",
                  width=15,
                  command=self.show_uploads).grid(row=0, column=1, padx=10)
+                 
+        self.compare_btn = t.Button(btn_frame, text="Compare",
+                 width=15,
+                 command=lambda: self.master.show_frame(Compare))
+        
+        self.compare_btn.grid(row=0, column=2, padx=10)
 
         # ✅ THIS is where dynamic content goes
         self.content_frame = t.Frame(self, bg="#0b0f3b")
@@ -161,6 +174,7 @@ class Dashboard(t.Frame):
         t.Button(upload_box,
                  text="Choose file",
                  command=self.upload_file).pack()
+                 
 
     # -------- FILE UPLOAD LOGIC --------
     # Opens file dialog and stores selected file
@@ -176,13 +190,13 @@ class Dashboard(t.Frame):
             self.analysed_docs.set(str(current + 1))
             
             if int(self.analysed_docs.get()) >= 2:
-                self.ready_to_compare_docs.set("✅")
+                self.ready_compare.set("✅")
 
 # -----FILE SELECTION SCREEN----- #
 # Shows both example files and uploaded files
 
 class FileSelection(t.Frame):
-    def __init__(self, master):
+    def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg="#0b0f3b")
 
         self.master = master
@@ -234,7 +248,7 @@ class FileSelection(t.Frame):
 # Displays results of selected file
     
 class Analysis(t.Frame):
-    def __init__(self, master):
+    def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg="#0b0f3b")
 
         self.label = t.Label(self, text="Analysis Results",
@@ -279,6 +293,46 @@ class Analysis(t.Frame):
         """
 
         self.result_box.config(text=result)
+# -----COMPARE DOCUMENTS SCREEN----- #
+# Displays screen that allows user to select documents to compare
+class Compare(t.Frame):
+    def __init__(self, master, total_docs, analysed_docs, ready_compare):
+        super().__init__(master, bg="#0b0f3b")
+        
+        self.analysed_docs = analysed_docs
+        self.total_docs = total_docs
+        self.ready_compare = ready_compare
+        
+        self.label = t.Label(self, text="select documents to compare",
+                             fg="white", bg="#0b0f3b",
+                             font=("Arial", 14))
+        self.label.pack(pady=10)
+        
+        self.result_box = t.Label(self, bg="#1a1f5a", fg="white",
+                                    justify="left", padx=20, pady=20)
+        self.result_box.pack(pady=20)
+        
+        t.Button(self, text="⬅ Back",
+            command=lambda: master.show_frame(Dashboard)
+            ).pack(anchor="nw")
+        
+    def refresh(self):
+        self.result_box.config(text="")
+        if int(self.analysed_docs.get()) < 2:
+        
+            result = """
+            Not enough analysed documents to perform comparison
+                    """
+            self.result_box.config(text=result)
+        
+        else:
+            result = """
+            Choose 2 documents to compare:
+                    """
+            self.result_box.config(text=result)
+
+        
+        
         
 # -----RUN APP----- #
 app = AityApp()
