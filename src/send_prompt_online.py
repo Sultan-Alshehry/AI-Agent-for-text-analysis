@@ -2,6 +2,9 @@ from key import key
 from google import genai
 
 ai_model = "gemini-3-flash-preview"
+
+# initial values only, later will be assigned in a function based
+# on the file word count
 max_summary = 60
 max_keywords = 5
 max_topics = 3
@@ -26,3 +29,7 @@ def get_output(message):
         + f"Here are the contents that you need to read: {message}",
     )
     return response
+
+
+def get_output_text(output):
+    return output.candidates[0].content.parts[0].text
