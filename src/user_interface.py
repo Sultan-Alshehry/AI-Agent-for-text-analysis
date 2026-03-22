@@ -294,7 +294,7 @@ class Analysis(t.Frame):
 
         self.result_box.config(text=result)
 # -----COMPARE DOCUMENTS SCREEN----- #
-# Displays screen that allows user to select documents to compare
+# Displays screen that allows user to select documents to compare and excecutes comparison
 class Compare(t.Frame):
     def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg="#0b0f3b")
@@ -302,6 +302,11 @@ class Compare(t.Frame):
         self.analysed_docs = analysed_docs
         self.total_docs = total_docs
         self.ready_compare = ready_compare
+        
+        
+        self.selected_amount = 0
+        self.files_to_compare = []
+        #self.enough_selected_documents = False
         
         self.label = t.Label(self, text="select documents to compare",
                              fg="white", bg="#0b0f3b",
@@ -315,11 +320,26 @@ class Compare(t.Frame):
         self.file_container = t.Frame(self, bg="#0b0f3b")
         self.file_container.pack()
         
+        self.selected_files = t.Frame(self, bg="#0b0f3b")
+        self.selected_files.pack(pady=10)
+        
+        self.selected_box = t.Label(self.selected_files, text="selected documents",
+                             fg="white", bg="#0b0f3b",
+                             font=("Arial", 12))
+        self.selected_box.pack() 
+        
         t.Button(self, text="⬅ Back",
             command=lambda: master.show_frame(Dashboard)
             ).pack(anchor="nw")
         
     def refresh(self):
+    
+        for widget in self.selected_files.winfo_children():
+            if widget != self.selected_box:
+                widget.destroy()
+        self.selected_amount = 0
+        self.files_to_compare = []
+    
         self.result_box.config(text="")
         if int(self.analysed_docs.get()) < 2:
         
@@ -336,24 +356,47 @@ class Compare(t.Frame):
             
             for widget in self.file_container.winfo_children():
                 widget.destroy()
+                
+            """t.Label(self.file_container, text="Example files",
+                     fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
 
             for name, content in self.master.example_files.items():
                 t.Button(self.file_container,
                         text=name,
                         command=lambda c=content, n=name: self.open_analysis_content(n, c)
-                        ).pack(pady=3)
+                        ).pack(pady=3)"""
 
             t.Label(self.file_container, text="Uploaded Files",
                     fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
+                    
 
             for file in self.master.files:
                 filename = file.split("/")[-1]
 
                 t.Button(self.file_container,
                         text=filename,
-                        command=lambda f=file: self.open_analysis(f)
+                        command=lambda f=file: self.select_document(f)
                         ).pack(pady=3)
-
+    #method used when selecting documents for comparing
+    def select_document(self, file):
+        
+        if self.selected_amount < 2:
+            t.Label(self.selected_files, text = file.split("/")[-1],
+            fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
+            self.files_to_compare.append(file)
+            self.selected_amount = self.selected_amount + 1
+            
+        
+        if self.selected_amount == 2:
+            t.Button(self.selected_files,
+                    text="Compare results",
+                    command=lambda f=self.files_to_compare: self.perform_comparison(f)
+                    ).pack(pady=3)
+            self.selected_amount = self.selected_amount + 1
+    
+    #this is where comparison is going to be implemented in future
+    def perform_comparison(self, files):
+        print(files)
         
         
         
