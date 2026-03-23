@@ -1,5 +1,17 @@
-from key import key
+import json
+import os
+
+try:
+    from key import key
+except ModuleNotFoundError:
+    key = None
+
 from google import genai
+
+try:
+    from keybert_analyzer import get_keybert_keywords
+except ImportError:
+    from .keybert_analyzer import get_keybert_keywords
 
 ai_model = "gemini-3-flash-preview"
 
@@ -15,10 +27,16 @@ json_format = {
     "topics": "topics here",
 }
 
-
 # send prompt to the AI
 def get_output(message):
-    client = genai.Client(api_key=key)
+    api_key = key or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "GenAI API key is missing. Please create `key.py` with `key='YOUR_KEY'` "
+            "or set GEMINI_API_KEY environment variable."
+        )
+
+    client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=ai_model,
         contents="Your task is to create keywords, topics, "
@@ -31,7 +49,45 @@ def get_output(message):
     )
     return response
 
-
-# returns only the json fomrat requested
+# Parse response to text content.
 def get_output_text(output):
     return output.candidates[0].content.parts[0].text
+
+# Analyze text with either GenAI or KeyBERT.
+#   mode options:
+#   genai: use AI model only (default)
+#   keybert: use KeyBERT only
+def analyze_text(message, mode="genai", top_n_keywords=None):
+    if top_n_keywords is None:
+        top_n_keywords = max_keywords
+
+    result = {
+        "summary": "",
+        "topics": [],
+        "ai_keywords": [],
+        "keybert_keywords": [],
+        "keywords": [],
+        "token_count": None,
+    }
+
+    if mode == "genai":
+        response = get_output(message)
+        parsed = json.loads(get_output_text(response))
+        result["summary"] = parsed.get("summary", "")
+        result["ai_keywords"] = parsed.get("keywords", [])
+        result["topics"] = parsed.get("topics", [])
+        result["token_count"] = getattr(
+            getattr(response, "usage_metadata", None), "total_token_count", None
+        )
+        result["keywords"] = result["ai_keywords"]
+
+    elif mode == "keybert":
+        result["keybert_keywords"] = get_keybert_keywords(
+            message, top_n=top_n_keywords
+        )
+        result["keywords"] = result["keybert_keywords"]
+
+    else:
+        raise ValueError("Invalid mode for analyze_text: choose 'genai' or 'keybert'.")
+
+    return result

@@ -1,9 +1,7 @@
 from typing import List, Tuple, Dict
 
-
 # Extract keywords using KeyBERT model
 def get_keybert_keywords(text: str, top_n: int = 5, ngram_range: Tuple[int, int] = (1, 2)) -> List[Dict[str, float]]:
-    """Extract keywords from text using KeyBERT."""
     try:
         from keybert import KeyBERT
     except ImportError as exc:

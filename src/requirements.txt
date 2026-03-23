@@ -1,1 +1,3 @@
 google-genai
+keybert
+sentence-transformers
