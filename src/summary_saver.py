@@ -2,16 +2,17 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-
 DEFAULT_SUMMARY_PATH = (
     Path(__file__).resolve().parent / "output" / "summary" / "summary.json"
 )
+
 
 def _ensure_parent_dir(path: Path) -> None:
 
     parent = path.parent
     if not parent.exists():
         parent.mkdir(parents=True, exist_ok=True)
+
 
 def save_summary(
     summary: Dict[str, Any],

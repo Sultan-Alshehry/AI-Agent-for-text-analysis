@@ -16,6 +16,7 @@ json_format = {
 }
 
 
+# send prompt to the AI
 def get_output(message):
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
@@ -31,5 +32,6 @@ def get_output(message):
     return response
 
 
+# returns only the json fomrat requested
 def get_output_text(output):
     return output.candidates[0].content.parts[0].text
