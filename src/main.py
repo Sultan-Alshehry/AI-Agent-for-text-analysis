@@ -1,5 +1,6 @@
 import json
 import summary_saver
+import file_reader
 import ai_config
 
 # We run the setup logic first to ensure the user has configured their AI settings before the app runs.
@@ -9,8 +10,7 @@ ai_config.setup_environment()
 import send_prompt_online
 
 # Main Execution Logic
-with open("../python_test/bible.txt", "r", encoding="utf-8") as file:
-    text = file.read()
+text = file_reader.read_file("../python_test/bible.txt")
 
 output = send_prompt_online.get_output(text)
 
