@@ -1,4 +1,5 @@
-from key import key
+#from key import key
+import os
 from google import genai
 
 ai_model = "gemini-3-flash-preview"
@@ -15,10 +16,14 @@ json_format = {
     "topics": "topics here",
 }
 
+def get_output(message):
+    api_key = os.environs.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
 
 # send prompt to the AI
 def get_output(message):
-    client = genai.Client(api_key=key)
+    api_key = os.environ.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=ai_model,
         contents="Your task is to create keywords, topics, "
@@ -32,6 +37,6 @@ def get_output(message):
     return response
 
 
-# returns only the json fomrat requested
+# returns only the json format requested
 def get_output_text(output):
     return output.candidates[0].content.parts[0].text
