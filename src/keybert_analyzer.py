@@ -10,7 +10,7 @@ def get_keybert_keywords(text: str, top_n: int = 5, ngram_range: Tuple[int, int]
             "or choose GenAI mode in send_prompt_online.analyze_text."
         ) from exc
 
-# Mini LLM model is used for keyword extraction as it is faster and more efficient for this task
+    # Mini LLM model is used for keyword extraction as it is faster and more efficient for this task
     model = KeyBERT(model="all-MiniLM-L6-v2")
     keywords = model.extract_keywords(
         text,

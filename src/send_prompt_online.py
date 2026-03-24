@@ -1,14 +1,7 @@
-import json
-import os
-
-try:
-    from key import key
-except ModuleNotFoundError:
-    key = None
-
 #from key import key
 import os
 from google import genai
+import json
 
 try:
     from keybert_analyzer import get_keybert_keywords
@@ -56,8 +49,8 @@ def get_output_text(output):
 
 # Analyze text with either GenAI or KeyBERT.
 #   mode options:
-#   genai: use AI model only (default)
-#   keybert: use KeyBERT only
+#   genai: use AI model for everything (summary, keywords, topics)
+#   keybert: use KeyBERT for keywords only (no summary or topics)
 def analyze_text(message, mode="genai", top_n_keywords=None):
     if top_n_keywords is None:
         top_n_keywords = max_keywords
