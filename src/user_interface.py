@@ -1,6 +1,9 @@
 import tkinter as t
 from tkinter import filedialog
 import os
+import main as m
+from PyPDF2 import PdfReader
+import json
 
 # AITY - AI Text Analysis Prototype
 # --------------------------------
@@ -256,8 +259,12 @@ class Analysis(t.Frame):
                              font=("Arial", 14))
         self.label.pack(pady=10)
 
-        self.result_box = t.Label(self, bg="#1a1f5a", fg="white",
-                                 justify="left", padx=20, pady=20)
+
+
+        self.result_box = t.Label(
+            self, bg="#1a1f5a", fg="white", justify="left", padx=20, pady=20, wraplength=500 
+        )
+
         self.result_box.pack(pady=20)
 
         t.Button(self, text="⬅ Back",
@@ -265,34 +272,75 @@ class Analysis(t.Frame):
                  ).pack(anchor="nw")
 
     # Reads file content and updates analysis view
-    # To be updated with actual AI analysis logic in future
+    # uses gemini models to generate analysis
     def update_analysis(self, filepath):
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception as e:
-            content = f"Error reading file: {e}"
+        print(filepath)
+        file_type = os.path.splitext(filepath)[1].lower()
+        
+        if file_type == ".pdf":
+            filepath1 = self.convert_pdf_to_text(filepath)
+            #print(filepath)
+            summarys_path = m.get_analysis_result(filepath1)
+            #summarys_path = m.get_dummy_results(filepath1)
+            
+        elif file_type == ".txt":
+            summarys_path = m.get_analysis_result(filepath)
+            #summarys_path = m.get_dummy_results(filepath)
+            
+        summary, keywords, topics = self.json_to_text(summarys_path)
+        
+        #print(summary + "\n")
+        #print(keywords + "\n")
+        #print(topics + "\n")
+        
+        self.update_analysis_from_text(summary, keywords, topics)
+    
+    #converts pdf files to text files
+    def convert_pdf_to_text(self, filepath):
+    
+        reader = PdfReader(filepath)
+        text = ""
+        
+        for page in reader.pages:
+            text += page.extract_text()
+            
+        
+        output_path = os.path.splitext(filepath)[0] + ".txt"
+            
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        
+        #print("Text file saved at:", output_path)
+        #print("Length of extracted text:", len(text))
+        return output_path
+        
+    def json_to_text(self, file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        summary = data.get("summary", "")
+        keywords = data.get("keywords", "")
+        topics = data.get("topics", "")
+        
+        return summary, keywords, topics
 
-        self.update_analysis_from_text(os.path.basename(filepath), content)
+    def update_analysis_from_text(self, summary, keywords, topics):
+        
+        display_text = f"Summary:\n{summary}\n\nKeywords:\n{"".join(keywords)}\n\nTopics:\n{"".join(topics)}"
+        
+        self.result_box.config(text=display_text)
+        
+        
+        #if (
+        #    hasattr(self.master, "example_analysis")
+        #    and filename in self.master.example_analysis
+        #):
+        #    result = f"""File: {filename}
+        
+        
 
-    def update_analysis_from_text(self, filename, text):
-        if hasattr(self.master, "example_analysis") and filename in self.master.example_analysis:
-            result = f"""File: {filename}
 
-{self.master.example_analysis[filename]}"""
-        else:
-            words = text.split()
-            word_count = len(words)
 
-            result = f"""File: {filename}
-
-        Word count: {word_count}
-
-        Preview:
-        {text[:200]}...
-        """
-
-        self.result_box.config(text=result)
 # -----COMPARE DOCUMENTS SCREEN----- #
 # Displays screen that allows user to select documents to compare and excecutes comparison
 class Compare(t.Frame):
@@ -312,9 +360,11 @@ class Compare(t.Frame):
                              fg="white", bg="#0b0f3b",
                              font=("Arial", 14))
         self.label.pack(pady=10)
-        
-        self.result_box = t.Label(self, bg="#1a1f5a", fg="white",
-                                    justify="left", padx=20, pady=20)
+
+        self.result_box = t.Label(
+            self, bg="#1a1f5a", fg="white", justify="left", padx=20, pady=20,
+        )
+
         self.result_box.pack(pady=20)
         
         self.file_container = t.Frame(self, bg="#0b0f3b")
