@@ -1,7 +1,14 @@
-import send_prompt_online
 import json
 import summary_saver
+import ai_config
 
+# We run the setup logic first to ensure the user has configured their AI settings before the app runs.
+ai_config.setup_environment()
+
+# We import the AI module ONLY AFTER the setup is complete
+import send_prompt_online
+
+# Main Execution Logic
 with open("../python_test/bible.txt", "r", encoding="utf-8") as file:
     text = file.read()
 
