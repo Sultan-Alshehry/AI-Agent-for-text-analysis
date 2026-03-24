@@ -6,6 +6,8 @@ try:
 except ModuleNotFoundError:
     key = None
 
+#from key import key
+import os
 from google import genai
 
 try:
@@ -27,15 +29,13 @@ json_format = {
     "topics": "topics here",
 }
 
+def get_output(message):
+    api_key = os.environs.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
+
 # send prompt to the AI
 def get_output(message):
-    api_key = key or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "GenAI API key is missing. Please create `key.py` with `key='YOUR_KEY'` "
-            "or set GEMINI_API_KEY environment variable."
-        )
-
+    api_key = os.environ.get("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model=ai_model,
@@ -49,7 +49,8 @@ def get_output(message):
     )
     return response
 
-# Parse response to text content.
+
+# returns only the json format requested
 def get_output_text(output):
     return output.candidates[0].content.parts[0].text
 
