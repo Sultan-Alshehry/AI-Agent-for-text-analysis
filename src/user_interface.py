@@ -1,9 +1,12 @@
 import tkinter as t
-from tkinter import filedialog
+from tkinter import filedialog, messagebox, simpledialog
 import os
 import main as m
-from PyPDF2 import PdfReader
 import json
+from PyPDF2 import PdfReader
+from ai_config import setup_environment, set_analysis_mode, set_gemini_api_key
+from summary_saver import save_summary
+import threading
 
 # AITY - AI Text Analysis Prototype
 # --------------------------------
@@ -20,33 +23,18 @@ class AityApp(t.Tk):
         self.title("AITY AI Agent for text analysing")
         self.geometry("600x600")
         self.config(bg="#0b0f3b")
-        
-        #variables that are used to show how many documents are
-        #uploaded, analysed and ready to compare
+
+        # Initialize analysis mode via setup_environment
+        self.analysis_mode = setup_environment()
+
+        # variables that are used to show how many documents are
+        # uploaded, analysed and ready to compare
         self.total_docs = t.StringVar(value="0")
         self.analysed_docs = t.StringVar(value="0")
         self.ready_to_compare_docs = t.StringVar(value="❌")
 
-# Store uploaded files and example files
+        # Store uploaded files and example files
         self.files = []
-
-        self.example_files = {
-            "sports.txt": "Ice hockey is popular. Football and skiing are common sports.",
-            "data.txt": "Data science includes machine learning, statistics, and visualization."
-        }
-
-        # Example analysis for sports.txt file
-        self.example_analysis = {
-            "sports.txt": """Keyword        Relevance
-
-ice hockey        8%
-floor ball           5%
-skiing                4.5%
-bouldering       3%
-dancing            2%
-football            1.5%
-futsal                1%"""
-        }
 
         self.frames = {}
 
@@ -55,14 +43,48 @@ futsal                1%"""
             self.frames[F] = frame
             frame.place(relwidth=1, relheight=1)
 
-        self.show_frame(Dashboard) 
+        self.show_frame(Dashboard)
 
-    # Swithes between screens "Documents", "Uploads"
+    # Switches mode between Gemini and keybert
+    def change_mode(self, mode):
+        if mode == "genai":
+            if not os.environ.get("GEMINI_API_KEY"):
+                key = simpledialog.askstring("Gemini API Key", "Enter GEMINI_API_KEY:")
+                if not key:
+                    messagebox.showwarning("Gemini required", "Gemini API key required to use Gemini mode. Falling back to KeyBERT if available.")
+                    # Try fallback to keybert
+                    try:
+                        import keybert
+                        self.change_mode("keybert")
+                    except ImportError:
+                        messagebox.showerror("No engine available", "Neither Gemini nor KeyBERT is available. Please install KeyBERT or provide a Gemini API key.")
+                    return
+                set_gemini_api_key(key)
+        elif mode == "keybert":
+            try:
+                import keybert
+            except ImportError:
+                messagebox.showwarning("KeyBERT not installed", "KeyBERT is not installed. Please install it with: pip install keybert sentence-transformers")
+                return
+
+        set_analysis_mode(mode)
+        self.analysis_mode = mode
+        print(f"Switched to mode: {mode}")
+
+        dashboard = self.frames.get(Dashboard)
+        if dashboard and hasattr(dashboard, "mode_label"):
+            dashboard.mode_label.config(text=f"Mode: {mode}")
+            # Refresh the content view to show updated mode in bottom label
+            dashboard.show_documents()
+
+        messagebox.showinfo("Mode switched", f"Analysis mode set to {mode}")
+
+    # Switches between screens "Documents", "Uploads"
     def show_frame(self, frame_class):
         frame = self.frames[frame_class]
 
         if frame_class == FileSelection:
-            frame.refresh_files()  
+            frame.refresh_files()
         if frame_class == Compare:
             frame.refresh()
 
@@ -94,7 +116,7 @@ class Dashboard(t.Frame):
 
         # ---- BUTTONS ----
         btn_frame = t.Frame(self, bg="#0b0f3b")
-        btn_frame.pack(pady=20)
+        btn_frame.pack(pady=20, anchor='center')
 
         t.Button(btn_frame, text="Documents",
                  width=15,
@@ -103,14 +125,27 @@ class Dashboard(t.Frame):
         t.Button(btn_frame, text="Uploads",
                  width=15,
                  command=self.show_uploads).grid(row=0, column=1, padx=10)
-                 
+
+        self.mode_label = t.Label(btn_frame, text=f"Mode: {self.master.analysis_mode}", fg="white", bg="#0b0f3b")
+        self.mode_label.grid(row=1, column=0, columnspan=3)
+
+        mode_frame = t.Frame(btn_frame, bg="#0b0f3b")
+        mode_frame.grid(row=2, column=0, columnspan=3, pady=10)
+
+        t.Button(mode_frame, text="Use Gemini",
+                width=12,
+                command=lambda: self.master.change_mode("genai")).pack(side="left", padx=10)
+
+        t.Button(mode_frame, text="Use KeyBERT",
+                width=12,
+                command=lambda: self.master.change_mode("keybert")).pack(side="left", padx=10)
+
         self.compare_btn = t.Button(btn_frame, text="Compare",
                  width=15,
                  command=lambda: self.master.show_frame(Compare))
         
         self.compare_btn.grid(row=0, column=2, padx=10)
 
-        # ✅ THIS is where dynamic content goes
         self.content_frame = t.Frame(self, bg="#0b0f3b")
         self.content_frame.pack(fill="both", expand=True)
 
@@ -149,9 +184,13 @@ class Dashboard(t.Frame):
                 fg="white", bg="#1a1f5a").pack(expand=True)
 
         t.Button(self.content_frame,
-                 text="View Documents",
-                 command=lambda: self.master.show_frame(FileSelection)
-                 ).pack(pady=10)
+                text="View Documents",
+                command=lambda: self.master.show_frame(FileSelection)).pack(pady=10)
+
+        # show current selection mode and file count
+        t.Label(self.content_frame,
+                text=f"Current mode: {self.master.analysis_mode} | Uploaded: {len(self.master.files)}",
+                fg="white", bg="#0b0f3b").pack(pady=5)
 
     # -------- UPLOAD VIEW --------
     # Shows file upload UI
@@ -184,8 +223,19 @@ class Dashboard(t.Frame):
     def upload_file(self):
         file = filedialog.askopenfilename()
         if file:
+            filename = file.split("/")[-1]
+            
+            # Validate PDF files before uploading
+            if filename.lower().endswith('.pdf'):
+                try:
+                    PdfReader(file)  # Verify PDF is readable
+                except Exception as e:
+                    messagebox.showerror("Invalid PDF", f"Cannot read PDF file: {str(e)}")
+                    return
+            
             self.master.files.append(file)
             print("Saved:", file)
+            messagebox.showinfo("Document Uploaded", f"Successfully uploaded: {filename}")
             current = int(self.total_docs.get())
             self.total_docs.set(str(current + 1))
             
@@ -194,6 +244,11 @@ class Dashboard(t.Frame):
             
             if int(self.analysed_docs.get()) >= 2:
                 self.ready_compare.set("✅")
+
+            # Immediately show the file selection so user can see new file
+            self.master.frames[FileSelection].refresh_files()
+            self.master.show_frame(FileSelection)
+
 
 # -----FILE SELECTION SCREEN----- #
 # Shows both example files and uploaded files
@@ -214,38 +269,30 @@ class FileSelection(t.Frame):
                  command=lambda: master.show_frame(Dashboard)
                  ).pack(anchor="nw")
 
-    def refresh_files(self):
-        for widget in self.file_container.winfo_children():
-            widget.destroy()
-
-        t.Label(self.file_container, text="Example Files",
-                fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack()
-
-        for name, content in self.master.example_files.items():
-            t.Button(self.file_container,
-                    text=name,
-                    command=lambda c=content, n=name: self.open_analysis_content(n, c)
-                    ).pack(pady=3)
-
-        t.Label(self.file_container, text="Uploaded Files",
-                fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
-
-        for file in self.master.files:
-            filename = file.split("/")[-1]
-
-            t.Button(self.file_container,
-                    text=filename,
-                    command=lambda f=file: self.open_analysis(f)
-                    ).pack(pady=3)
-
     def open_analysis(self, file):
         self.master.selected_file = file
         self.master.frames[Analysis].update_analysis(file)
         self.master.show_frame(Analysis)
 
-    def open_analysis_content(self, name, content):
-        self.master.frames[Analysis].update_analysis_from_text(name, content)
-        self.master.show_frame(Analysis)
+    def refresh_files(self):
+        for widget in self.file_container.winfo_children():
+            widget.destroy()
+
+        t.Label(self.file_container, text="Uploaded Files",
+                fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
+
+        if not self.master.files:
+            t.Label(self.file_container,
+                    text="No uploaded files yet.",
+                    fg="white", bg="#0b0f3b").pack(pady=5)
+        else:
+            for file in self.master.files:
+                filename = file.replace('\\', '/').split("/")[-1]
+
+                t.Button(self.file_container,
+                        text=filename,
+                        command=lambda f=file: self.open_analysis(f)
+                        ).pack(pady=3)
 
 # -----ANALYSIS SCREEN----- #
 # Displays results of selected file
@@ -254,12 +301,13 @@ class Analysis(t.Frame):
     def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg="#0b0f3b")
 
+        self.current_results = None  # Store current results for saving
+        self.current_filepath = None  # Store current filepath for saving
+
         self.label = t.Label(self, text="Analysis Results",
                              fg="white", bg="#0b0f3b",
                              font=("Arial", 14))
         self.label.pack(pady=10)
-
-
 
         self.result_box = t.Label(
             self, bg="#1a1f5a", fg="white", justify="left", padx=20, pady=20, wraplength=500 
@@ -267,52 +315,43 @@ class Analysis(t.Frame):
 
         self.result_box.pack(pady=20)
 
-        t.Button(self, text="⬅ Back",
+        # Button frame for Back and Save buttons
+        button_frame = t.Frame(self, bg="#0b0f3b")
+        button_frame.pack(anchor="nw", pady=10)
+
+        t.Button(button_frame, text="⬅ Back",
                  command=lambda: master.show_frame(FileSelection)
-                 ).pack(anchor="nw")
+                 ).pack(side="left", padx=5)
+
+        t.Button(button_frame, text="💾 Save Results",
+                 command=self.save_results
+                 ).pack(side="left", padx=5)
 
     # Reads file content and updates analysis view
-    # uses gemini models to generate analysis
+    # uses gemini or keybert based on selected mode
     def update_analysis(self, filepath):
         print(filepath)
-        file_type = os.path.splitext(filepath)[1].lower()
-        
-        if file_type == ".pdf":
-            filepath1 = self.convert_pdf_to_text(filepath)
-            #print(filepath)
-            summarys_path = m.get_analysis_result(filepath1)
-            #summarys_path = m.get_dummy_results(filepath1)
-            
-        elif file_type == ".txt":
-            summarys_path = m.get_analysis_result(filepath)
-            #summarys_path = m.get_dummy_results(filepath)
-            
-        summary, keywords, topics = self.json_to_text(summarys_path)
-        
-        #print(summary + "\n")
-        #print(keywords + "\n")
-        #print(topics + "\n")
-        
-        self.update_analysis_from_text(summary, keywords, topics)
-    
-    #converts pdf files to text files
+        self.current_filepath = filepath
+
+        self.result_box.config(text="Analyzing... Please wait.")
+        self.update()  # Force UI update
+
+        def analyze():
+            try:
+                mode = getattr(self.master, "analysis_mode", "genai")
+                summarys_path = m.get_analysis_result(filepath, mode=mode)
+
+                summary, keywords, topics = self.json_to_text(summarys_path)
+                self.update_analysis_from_text(summary, keywords, topics)
+            except Exception as e:
+                self.result_box.config(text=f"Error during analysis: {str(e)}")
+
+        thread = threading.Thread(target=analyze)
+        thread.start()
+
+    # NOTE: PDF conversion is handled by file_reader.read_file now, so this is no longer used
     def convert_pdf_to_text(self, filepath):
-    
-        reader = PdfReader(filepath)
-        text = ""
-        
-        for page in reader.pages:
-            text += page.extract_text()
-            
-        
-        output_path = os.path.splitext(filepath)[0] + ".txt"
-            
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(text)
-        
-        #print("Text file saved at:", output_path)
-        #print("Length of extracted text:", len(text))
-        return output_path
+        raise NotImplementedError("PDF conversion is done via file_reader.read_file in main.get_analysis_result")
         
     def json_to_text(self, file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -325,22 +364,62 @@ class Analysis(t.Frame):
         return summary, keywords, topics
 
     def update_analysis_from_text(self, summary, keywords, topics):
-        
-        display_text = f"Summary:\n{summary}\n\nKeywords:\n{"".join(keywords)}\n\nTopics:\n{"".join(topics)}"
-        
+        # Normalize lists/dicts
+        def normalize(items):
+            if items is None:
+                return []
+            if isinstance(items, list):
+                return items
+            return [items]
+
+        keywords_list = normalize(keywords)
+        topics_list = normalize(topics)
+
+        if keywords_list and isinstance(keywords_list[0], dict):
+            keywords_text = "\n".join(
+                f"- {item.get('keyword', item.get('key', str(item)))} ({item.get('score', '')})"
+                for item in keywords_list
+            )
+        else:
+            keywords_text = "\n".join(str(item) for item in keywords_list)
+
+        topics_text = "\n".join(str(item) for item in topics_list)
+
+        display_text = (
+            f"Summary:\n{summary}\n\n"
+            f"Keywords:\n{keywords_text}\n\n"
+            f"Topics:\n{topics_text}"
+        )
+
         self.result_box.config(text=display_text)
         
+        # Store results for potential saving
+        self.current_results = {
+            "summary": summary,
+            "keywords": keywords,
+            "topics": topics
+        }
+    
+    def save_results(self):
+        """Save analysis results to a custom location using save_summary"""
+        if not self.current_results:
+            messagebox.showwarning("No Results", "No analysis results to save. Please analyze a document first.")
+            return
         
-        #if (
-        #    hasattr(self.master, "example_analysis")
-        #    and filename in self.master.example_analysis
-        #):
-        #    result = f"""File: {filename}
+        # Ask user where to save
+        output_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=f"analysis_results.json"
+        )
         
+        if output_path:
+            try:
+                save_summary(self.current_results, output_path)
+                messagebox.showinfo("Success", f"Results saved to:\n{output_path}")
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save results: {str(e)}")
         
-
-
-
 # -----COMPARE DOCUMENTS SCREEN----- #
 # Displays screen that allows user to select documents to compare and excecutes comparison
 class Compare(t.Frame):
@@ -382,51 +461,6 @@ class Compare(t.Frame):
             command=lambda: master.show_frame(Dashboard)
             ).pack(anchor="nw")
         
-    def refresh(self):
-    
-        for widget in self.selected_files.winfo_children():
-            if widget != self.selected_box:
-                widget.destroy()
-        self.selected_amount = 0
-        self.files_to_compare = []
-    
-        self.result_box.config(text="")
-        if int(self.analysed_docs.get()) < 2:
-        
-            result = """
-            Not enough analysed documents to perform comparison
-                    """
-            self.result_box.config(text=result)
-        
-        else:
-            result = """
-            Choose 2 documents to compare:
-                    """
-            self.result_box.config(text=result)
-            
-            for widget in self.file_container.winfo_children():
-                widget.destroy()
-                
-            """t.Label(self.file_container, text="Example files",
-                     fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
-
-            for name, content in self.master.example_files.items():
-                t.Button(self.file_container,
-                        text=name,
-                        command=lambda c=content, n=name: self.open_analysis_content(n, c)
-                        ).pack(pady=3)"""
-
-            t.Label(self.file_container, text="Uploaded Files",
-                    fg="white", bg="#0b0f3b", font=("Arial", 10, "bold")).pack(pady=10)
-                    
-
-            for file in self.master.files:
-                filename = file.split("/")[-1]
-
-                t.Button(self.file_container,
-                        text=filename,
-                        command=lambda f=file: self.select_document(f)
-                        ).pack(pady=3)
     #method used when selecting documents for comparing
     def select_document(self, file):
         
@@ -448,6 +482,34 @@ class Compare(t.Frame):
     def perform_comparison(self, files):
         print(files)
         
+    def refresh(self):
+        for widget in self.file_container.winfo_children():
+            widget.destroy()
+
+        for widget in self.selected_files.winfo_children():
+            if widget != self.selected_box:
+                widget.destroy()
+
+        self.selected_amount = 0
+        self.files_to_compare = []
+
+        if int(self.analysed_docs.get()) < 2:
+            self.result_box.config(text="Not enough analysed documents to perform comparison")
+            return
+
+        self.result_box.config(text="Choose 2 documents to compare:")
+
+        t.Label(self.file_container, text="Uploaded Files",
+                fg="white", bg="#0b0f3b",
+                font=("Arial", 10, "bold")).pack(pady=10)
+
+        for file in self.master.files:
+            filename = file.replace('\\', '/').split("/")[-1]
+
+            t.Button(self.file_container,
+                    text=filename,
+                    command=lambda f=file: self.select_document(f)
+                    ).pack(pady=3)
         
         
 # -----RUN APP----- #
