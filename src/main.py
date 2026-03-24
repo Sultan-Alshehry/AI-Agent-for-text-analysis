@@ -1,6 +1,6 @@
-import json
 import summary_saver
 import ai_config
+from pathlib import Path
 
 # We run the setup logic first to ensure the user has configured their AI settings before the app runs.
 ai_config.setup_environment()
@@ -9,18 +9,32 @@ ai_config.setup_environment()
 import send_prompt_online
 
 # Main Execution Logic
-with open("../python_test/bible.txt", "r", encoding="utf-8") as file:
+base_dir = Path(__file__).resolve().parent
+bible_path = base_dir.parent / "python_test" / "bible.txt"
+with open(bible_path, "r", encoding="utf-8") as file:
     text = file.read()
 
-output = send_prompt_online.get_output(text)
+# Ask user to choose analysis mode
+print("\nChoose analysis mode:")
+print("1. AI (Gemini) - provides summary, keywords, and topics")
+print("2. KeyBERT - extracts keywords only (no API key needed)")
+choice = input("\nEnter your choice (1 or 2): ").strip()
 
-text = json.loads(send_prompt_online.get_output_text(output))
+mode = "genai" if choice == "1" else "keybert" if choice == "2" else "genai"
 
-print(text["summary"])
-print(text["keywords"])
-print(text["topics"])
-tokens = output.usage_metadata.total_token_count
-print(f"Number of tokens used: {tokens}")
+# Analyze the text
+analysis = send_prompt_online.analyze_text(text, mode=mode)
 
-saved_path = summary_saver.save_summary(text)
+# Display results based on mode
+if mode == "genai":
+    print("\n=== AI Analysis Results ===")
+    print("Summary:\n", analysis.get("summary", ""))
+    print("\nTopics:\n", analysis.get("topics", []))
+    print("Keywords (AI):", analysis.get("ai_keywords", []))
+    print(f"Number of tokens used: {analysis.get('token_count')}")
+else:
+    print("\n=== KeyBERT Analysis Results ===")
+    print("Keywords (KeyBERT):", analysis.get("keybert_keywords", []))
+
+saved_path = summary_saver.save_summary(analysis)
 print(f"\nSuccess! Summary saved to: {saved_path}")

@@ -28,3 +28,4 @@ def setup_environment():
                 sys.exit(1)
         else:
             sys.exit("Invalid choice. Existing application.")
+            
