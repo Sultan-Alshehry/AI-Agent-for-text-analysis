@@ -1,6 +1,7 @@
 import summary_saver
 import ai_config
 from pathlib import Path
+import state
 
 # We run the setup logic first to ensure the user has configured their AI settings before the app runs.
 ai_config.setup_environment()
