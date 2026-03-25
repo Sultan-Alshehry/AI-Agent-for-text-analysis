@@ -1,5 +1,8 @@
 import os
 from typing import Literal
+import json as j
+from pathlib import Path
+import state as t
 
 AnalysisMode = Literal["genai", "keybert"]
 
@@ -9,7 +12,7 @@ def get_analysis_mode() -> AnalysisMode:
     if mode in ("genai", "keybert"):
         return mode
 
-    if os.environ.get("GEMINI_API_KEY"):
+    if t.API_KEY:
         return "genai"
 
     return "keybert"
@@ -30,14 +33,17 @@ def set_gemini_api_key(api_key: str) -> None:
     api_key = api_key.strip()
     if len(api_key) < 20:
         raise ValueError("Gemini API key seems too short. Please verify the key.")
+    t.API_KEY = api_key
+    #print(t.API_KEY)
+    #os.environ["GEMINI_API_KEY"] = api_key
     
-    os.environ["GEMINI_API_KEY"] = api_key
+    
 
 
 def setup_environment() -> AnalysisMode:
     # If user has already selected mode (or has key), use that.
     current_mode = get_analysis_mode()
-    if current_mode == "genai" and os.environ.get("GEMINI_API_KEY"):
+    if current_mode == "genai" and t.API_KEY:
         return "genai"
     if current_mode == "keybert":
         return "keybert"

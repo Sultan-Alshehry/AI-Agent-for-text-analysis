@@ -1,8 +1,8 @@
 {
-  "summary": "This paper investigates automatic paraphrase identification using the Sentence-BERT (SBERT) model. Researchers developed an algorithm to identify semantically similar sentences within a custom English news corpus focused on COVID-19. SBERT demonstrated superior processing speed and accuracy compared to standard BERT, achieving a 77% precision rate in identifying paraphrases across different news sources.",
-  "keywords": "Sentence-BERT, paraphrase identification, semantic similarity, news corpus, COVID-19",
-  "topics": "Natural Language Processing, Information Retrieval, Computational Linguistics",
-  "token_count": 8962,
+  "summary": "The paper explores automatic paraphrase identification using a fine-tuned Sentence-BERT model. By developing a COVID-19 news corpus from CNN and Yahoo News, the authors demonstrate Sentence-BERT's superior efficiency and speed over standard BERT. The implemented algorithm achieves 77% precision, effectively classifying semantically similar sentences while significantly reducing computational processing time for large text datasets.",
+  "keywords": "Sentence-BERT, Paraphrase identification, Semantic similarity, COVID-19 corpus, NLP",
+  "topics": "Computational Linguistics, Machine Learning, Information Retrieval",
+  "token_count": 8923,
   "mode": "genai",
-  "source_file": "C:\\Users\\Pihla\\Downloads\\paper6.txt"
+  "source_file": "C:\\BAC\\paper6.pdf"
 }

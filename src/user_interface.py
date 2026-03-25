@@ -1,12 +1,12 @@
 import tkinter as t
 from tkinter import filedialog, messagebox, simpledialog
 import os
-import main as m
 import json
 from PyPDF2 import PdfReader
 from ai_config import setup_environment, set_analysis_mode, set_gemini_api_key
 from summary_saver import save_summary
 import threading
+import analysis as a
 
 # AITY - AI Text Analysis Prototype
 # --------------------------------
@@ -339,7 +339,7 @@ class Analysis(t.Frame):
         def analyze():
             try:
                 mode = getattr(self.master, "analysis_mode", "genai")
-                summarys_path = m.get_analysis_result(filepath, mode=mode)
+                summarys_path = a.get_analysis_result(filepath, mode=mode)
 
                 summary, keywords, topics = self.json_to_text(summarys_path)
                 self.update_analysis_from_text(summary, keywords, topics)

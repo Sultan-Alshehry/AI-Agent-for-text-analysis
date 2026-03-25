@@ -1,8 +1,8 @@
 {
-  "summary": "The first Steering Group meeting for the AITY project focused on reviewing and approving the initial Project Plan. Discussions covered the Figma prototype, file formats, and risk management. Key decisions include finalizing design documentation before coding begins and expanding the test plan. The plan was approved subject to revisions before the next meeting in March.",
-  "keywords": "AITY, AI Agent, Project Plan, Text Analysis, Prototype",
-  "topics": "Project Management, Software Development, Quality Assurance",
-  "token_count": 2227,
+  "summary": "The first steering group meeting for the AITY project focused on reviewing and approving the initial project plan. Key decisions included refining the Figma prototype, expanding the test plan, and finalizing design documentation before coding. The plan was approved with revisions regarding team roles, risk management, and file format specifications.",
+  "keywords": "AI Agent, Project Plan, Text Analysis, Software Design, Prototype",
+  "topics": "Project Management, Software Development, Artificial Intelligence",
+  "token_count": 2024,
   "mode": "genai",
   "source_file": "C:\\Users\\Pihla\\Downloads\\27.2. 1st SG Meeting Minutes (1).pdf"
 }

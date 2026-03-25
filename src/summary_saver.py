@@ -1,10 +1,7 @@
 import json
+import state
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-
-DEFAULT_SUMMARY_PATH = (
-    Path(__file__).resolve().parent / "output" / "summary" / "summary.json"
-)
 
 
 def _ensure_parent_dir(path: Path) -> None:
@@ -21,7 +18,7 @@ def save_summary(
     indent: int = 2,
 ) -> Path:
 
-    path = Path(output_path) if output_path is not None else DEFAULT_SUMMARY_PATH
+    path = Path(output_path) if output_path is not None else state.DEFAULT_SUMMARY_PATH
     _ensure_parent_dir(path)
 
     with path.open("w", encoding="utf-8") as f:
