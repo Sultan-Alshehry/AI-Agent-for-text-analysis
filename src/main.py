@@ -9,6 +9,7 @@ from file_reader import read_file
 
 
 def get_analysis_result(filepath: str, mode: str = None):
+    print(filepath, mode)
     if mode is None:
         mode = get_analysis_mode()
 

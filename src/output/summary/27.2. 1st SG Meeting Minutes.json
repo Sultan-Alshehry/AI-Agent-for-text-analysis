@@ -1,0 +1,29 @@
+{
+  "summary": "",
+  "keywords": [
+    {
+      "keyword": "emphasized documenting",
+      "score": 0.3795
+    },
+    {
+      "keyword": "ject plan",
+      "score": 0.4088
+    },
+    {
+      "keyword": "figma prototype",
+      "score": 0.4145
+    },
+    {
+      "keyword": "problem meeting",
+      "score": 0.4189
+    },
+    {
+      "keyword": "sg meeting",
+      "score": 0.4766
+    }
+  ],
+  "topics": [],
+  "token_count": null,
+  "mode": "keybert",
+  "source_file": "C:\\Users\\Pihla\\Downloads\\27.2. 1st SG Meeting Minutes.pdf"
+}
