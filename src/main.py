@@ -1,4 +1,5 @@
 import summary_saver
+import file_reader
 import ai_config
 from pathlib import Path
 import state
@@ -10,10 +11,7 @@ ai_config.setup_environment()
 import send_prompt_online
 
 # Main Execution Logic
-base_dir = Path(__file__).resolve().parent
-bible_path = base_dir.parent / "python_test" / "bible.txt"
-with open(bible_path, "r", encoding="utf-8") as file:
-    text = file.read()
+text = file_reader.read_file("../python_test/bible.txt")
 
 # Ask user to choose analysis mode
 print("\nChoose analysis mode:")
