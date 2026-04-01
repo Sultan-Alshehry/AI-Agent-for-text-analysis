@@ -1,17 +1,27 @@
-#from key import key
+
 from google import genai
 import json
 import re
 import state
 
+"""
+AI Analysis Module
+------------------
+Handles communication with AI services for text analysis:
+- Gemini (Google's generative AI): Full analysis (summary, keywords, topics)
+- KeyBERT: Keyword extraction using transformer models
+
+Supports fallback between modes and format handling for both services.
+"""
+
 try:
     from keybert_analyzer import get_keybert_keywords
 except ImportError:
-    from .keybert_analyzer import get_keybert_keywords
+    from keybert_analyzer import get_keybert_keywords
 
 
-# send prompt to the AI
 def get_output(message):
+    # Send text to Gemini API for analysis and return response.
     client = genai.Client(api_key=state.API_KEY)
     response = client.models.generate_content(
         model=state.AI_MODEL,
@@ -26,17 +36,14 @@ def get_output(message):
     return response
 
 
-# returns only the json format requested
 def get_output_text(output):
+    # Extract and clean JSON text from Gemini response.
     output = output.candidates[0].content.parts[0].text
     cleaned = re.sub(r"^```json\s*|```$", "", output.strip(), 0, re.MULTILINE)
     return cleaned
 
-# Analyze text with either GenAI or KeyBERT.
-#   mode options:
-#   genai: use AI model for everything (summary, keywords, topics)
-#   keybert: use KeyBERT for keywords only (no summary or topics)
 def analyze_text(message, mode="genai", top_n_keywords=None):
+    # Analyze text using specified AI mode.
     if top_n_keywords is None:
         top_n_keywords = state.MAX_KEYWORDS
 

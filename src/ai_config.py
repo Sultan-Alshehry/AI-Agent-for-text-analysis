@@ -1,25 +1,73 @@
 
 from typing import Literal
-import json as j
-from pathlib import Path
-import state as t
 import state
+from data_manager import DataManager
+
+
+"""
+AI Configuration Module
+-----------------------
+Handles all AI-related configuration and setup, including:
+- Analysis mode management (Gemini vs KeyBERT)
+- Mode validation and fallback logic
+- API key management
+- Environment setup
+"""
+
 
 AnalysisMode = Literal["genai", "keybert"]
 
 
+def is_keybert_available() -> bool:
+    #Check if KeyBERT is installed and available.
+    try:
+        import keybert
+        return True
+    except ImportError:
+        return False
+
+
+def validate_and_resolve_mode(requested_mode: AnalysisMode) -> AnalysisMode:
+    if requested_mode == "genai":
+        if state.API_KEY:
+            return "genai"
+        # Fallback to KeyBERT if Gemini key is missing
+        if is_keybert_available():
+            print("Gemini API key not set. Falling back to KeyBERT.")
+            return "keybert"
+        raise EnvironmentError(
+            "Gemini API key not set and KeyBERT is not available."
+        )
+    
+    elif requested_mode == "keybert":
+        if is_keybert_available():
+            return "keybert"
+        # Fallback to Gemini if KeyBERT is not installed
+        if state.API_KEY:
+            print("KeyBERT not installed. Falling back to Gemini.")
+            return "genai"
+        raise EnvironmentError(
+            "KeyBERT not installed and Gemini API key not set."
+        )
+    
+    else:
+        raise ValueError(f"Invalid mode: {requested_mode}")
+
+
 def get_analysis_mode() -> AnalysisMode:
-    mode = state.ANALYSIS_MODE
-    if mode in ("genai", "keybert"):
-        return mode
-
-    if t.API_KEY:
+    # Returns current analysis mode, defaulting based on API key availability.
+    # Prefers saved mode if available.
+    if state.ANALYSIS_MODE in ("genai", "keybert"):
+        return state.ANALYSIS_MODE
+    if state.API_KEY:
+        state.ANALYSIS_MODE = "genai"
         return "genai"
-
+    state.ANALYSIS_MODE = "keybert"
     return "keybert"
 
 
 def set_analysis_mode(mode: str) -> AnalysisMode:
+    # Set analysis mode to 'genai' or 'keybert'.
     if mode not in ("genai", "keybert"):
         raise ValueError("mode must be 'genai' or 'keybert'")
     state.ANALYSIS_MODE = mode
@@ -27,6 +75,7 @@ def set_analysis_mode(mode: str) -> AnalysisMode:
 
 
 def set_gemini_api_key(api_key: str) -> None:
+    # Set the Gemini API key in state with basic validation.
     if not api_key or not api_key.strip():
         raise ValueError("Gemini API key cannot be empty")
     
@@ -34,38 +83,23 @@ def set_gemini_api_key(api_key: str) -> None:
     api_key = api_key.strip()
     if len(api_key) < 20:
         raise ValueError("Gemini API key seems too short. Please verify the key.")
-    t.API_KEY = api_key
-    #print(t.API_KEY)
-    #os.environ["GEMINI_API_KEY"] = api_key
-    
-    
+    state.API_KEY = api_key
+    # Persist API key to user_data.json
+    DataManager.set_api_key(api_key)
 
-
+    
 def setup_environment() -> AnalysisMode:
-    # If user has already selected mode (or has key), use that.
-    current_mode = get_analysis_mode()
-    if current_mode == "genai" and t.API_KEY:
+    # Initialize the AI environment and return the selected analysis mode.
+    # Load saved API key from persistent storage
+    saved_key = DataManager.get_api_key()
+    if saved_key:
+        state.API_KEY = saved_key
+    
+    mode = get_analysis_mode()
+    if mode == "genai" and state.API_KEY:
+        print("Using Gemini API for analysis.")
         return "genai"
-    if current_mode == "keybert":
+    if mode == "keybert":
+        print("Using KeyBERT for analysis.")
         return "keybert"
-
-    # no mode set yet: prompt user
-    print("Welcome to AITY! Select analysis mode:")
-    print("1. Gemini API (online, needs GEMINI_API_KEY)")
-    print("2. KeyBERT (local, no API key needed)")
-
-    choice = input("Please choose an option (1 or 2): ").strip()
-
-    if choice == "1":
-        api_key = input("Enter your Gemini API key: ").strip()
-        if not api_key:
-            raise ValueError("Gemini API key cannot be empty")
-        set_gemini_api_key(api_key)
-        set_analysis_mode("genai")
-        return "genai"
-
-    if choice == "2":
-        set_analysis_mode("keybert")
-        return "keybert"
-
-    raise ValueError("Invalid choice. Choose 1 or 2.")
+    
