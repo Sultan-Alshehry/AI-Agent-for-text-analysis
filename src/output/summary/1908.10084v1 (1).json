@@ -1,0 +1,29 @@
+{
+  "summary": "",
+  "keywords": [
+    {
+      "keyword": "millions sentences",
+      "score": 0.4698
+    },
+    {
+      "keyword": "encoder bert",
+      "score": 0.4701
+    },
+    {
+      "keyword": "tasks bert",
+      "score": 0.4727
+    },
+    {
+      "keyword": "embeddings semantically",
+      "score": 0.476
+    },
+    {
+      "keyword": "semantic similarity",
+      "score": 0.5113
+    }
+  ],
+  "topics": [],
+  "token_count": null,
+  "mode": "keybert",
+  "source_file": "C:\\Users\\Pihla\\Downloads\\1908.10084v1 (1).pdf"
+}

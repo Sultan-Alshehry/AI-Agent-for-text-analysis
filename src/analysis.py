@@ -1,4 +1,4 @@
-import os
+
 from pathlib import Path
 import json
 import summary_saver
@@ -28,7 +28,7 @@ def get_analysis_result(filepath: str, mode: str = None):
             import keybert
         except ImportError:
             # Try fallback to genai if key available
-            if os.environ.get("GEMINI_API_KEY"):
+            if state.API_KEY:
                 print("KeyBERT not installed. Falling back to Gemini.")
                 mode = "genai"
             else:

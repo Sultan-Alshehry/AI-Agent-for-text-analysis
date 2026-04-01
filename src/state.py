@@ -19,4 +19,5 @@ JSON_FORMAT = {
     "topics": "topics here",
 }
 
-AI_MODEL = "gemini-3-flash-preview"
+#AI_MODEL = "gemini-3-flash-preview"
+AI_MODEL = "gemini-3.1-flash-lite-preview"

@@ -1,5 +1,4 @@
 #from key import key
-import os
 from google import genai
 import json
 import re

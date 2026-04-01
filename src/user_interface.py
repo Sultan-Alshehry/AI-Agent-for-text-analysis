@@ -2,11 +2,12 @@ import tkinter as t
 from tkinter import filedialog, messagebox, simpledialog
 import os
 import json
-from PyPDF2 import PdfReader
 from ai_config import setup_environment, set_analysis_mode, set_gemini_api_key
 from summary_saver import save_summary
+from PyPDF2 import PdfReader
 import threading
 import analysis as a
+import state
 
 # AITY - AI Text Analysis Prototype
 # --------------------------------
@@ -48,7 +49,7 @@ class AityApp(t.Tk):
     # Switches mode between Gemini and keybert
     def change_mode(self, mode):
         if mode == "genai":
-            if not os.environ.get("GEMINI_API_KEY"):
+            if not state.API_KEY:
                 key = simpledialog.askstring("Gemini API Key", "Enter GEMINI_API_KEY:")
                 if not key:
                     messagebox.showwarning("Gemini required", "Gemini API key required to use Gemini mode. Falling back to KeyBERT if available.")
@@ -63,7 +64,9 @@ class AityApp(t.Tk):
         elif mode == "keybert":
             try:
                 import keybert
+                state.KEYBERT_INSTALLED = True
             except ImportError:
+                state.KEYBERT_INSTALLED = False
                 messagebox.showwarning("KeyBERT not installed", "KeyBERT is not installed. Please install it with: pip install keybert sentence-transformers")
                 return
 
