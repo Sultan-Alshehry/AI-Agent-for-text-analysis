@@ -1,0 +1,29 @@
+{
+  "summary": "",
+  "keywords": [
+    {
+      "keyword": "meeting officially",
+      "score": 0.4053
+    },
+    {
+      "keyword": "outlining project",
+      "score": 0.4054
+    },
+    {
+      "keyword": "ai agent",
+      "score": 0.4063
+    },
+    {
+      "keyword": "microsoft teams",
+      "score": 0.4127
+    },
+    {
+      "keyword": "minutes aity",
+      "score": 0.4184
+    }
+  ],
+  "topics": [],
+  "token_count": null,
+  "mode": "keybert",
+  "source_file": "C:\\Users\\Pihla\\Downloads\\AITY Meeting Minutes - Kick-Off Meeting.pdf"
+}

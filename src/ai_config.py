@@ -1,14 +1,15 @@
-import os
+
 from typing import Literal
 import json as j
 from pathlib import Path
 import state as t
+import state
 
 AnalysisMode = Literal["genai", "keybert"]
 
 
 def get_analysis_mode() -> AnalysisMode:
-    mode = os.environ.get("AITY_ANALYSIS_MODE")
+    mode = state.ANALYSIS_MODE
     if mode in ("genai", "keybert"):
         return mode
 
@@ -21,7 +22,7 @@ def get_analysis_mode() -> AnalysisMode:
 def set_analysis_mode(mode: str) -> AnalysisMode:
     if mode not in ("genai", "keybert"):
         raise ValueError("mode must be 'genai' or 'keybert'")
-    os.environ["AITY_ANALYSIS_MODE"] = mode
+    state.ANALYSIS_MODE = mode
     return mode
 
 
