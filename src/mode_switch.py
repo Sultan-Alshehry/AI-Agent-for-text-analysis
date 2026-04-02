@@ -1,4 +1,3 @@
-
 from tkinter import simpledialog, messagebox
 import state
 from ai_config import set_gemini_api_key, set_analysis_mode
@@ -53,3 +52,21 @@ def set_mode(mode: str):
     # Update the mode in state
     set_analysis_mode(mode)
     print(f"Switched to mode: {mode}")
+    
+def change_API_key():
+    #Changes api key
+    key = simpledialog.askstring(
+                "Gemini API Key", 
+                "Enter your GEMINI_API_KEY:\n\n(This will be saved for future sessions)"
+            )
+    try:
+        set_gemini_api_key(key)
+        messagebox.showinfo(
+            "Success",
+            "API key saved! You won't need to enter it again."
+            )
+    except ValueError as e:
+        messagebox.showerror("Invalid API Key", str(e))
+        return
+        
+    return

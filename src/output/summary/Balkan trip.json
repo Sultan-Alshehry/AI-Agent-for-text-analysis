@@ -1,0 +1,29 @@
+{
+  "summary": "",
+  "keywords": [
+    {
+      "keyword": "keckemet serbia",
+      "score": 0.5154
+    },
+    {
+      "keyword": "mostar bosnia",
+      "score": 0.5226
+    },
+    {
+      "keyword": "croatia nights",
+      "score": 0.57
+    },
+    {
+      "keyword": "albania night",
+      "score": 0.5886
+    },
+    {
+      "keyword": "balkans route",
+      "score": 0.6241
+    }
+  ],
+  "topics": [],
+  "token_count": null,
+  "mode": "keybert",
+  "source_file": "C:\\Users\\Pihla\\Downloads\\Balkan trip.pdf"
+}

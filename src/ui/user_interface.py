@@ -4,12 +4,12 @@ from tkinter import filedialog, messagebox
 import threading
 from ai_config import setup_environment
 from summary_saver import save_summary
-from mode_switch import set_mode
+from mode_switch import set_mode, change_API_key
 from analysis import json_to_text
-from ui_constants import UIConstants as C
+from ui.ui_constants import UIConstants as C
 from file_reader import validate_and_read_file
 from analysis_formatter import format_analysis_for_ui
-from ui_helpers import (
+from ui.ui_helpers import (
     create_hero_frame, create_centered_label, create_button,
     create_upload_box, create_info_label, create_stat_box
 )
@@ -72,6 +72,9 @@ class AityApp(t.Tk):
             dashboard.show_documents()
 
         messagebox.showinfo("Mode switched", f"Analysis mode set to {self.analysis_mode}")
+        
+        
+    
 
 
     # Switches between screens "Documents", "Uploads"
@@ -137,6 +140,10 @@ class Dashboard(t.Frame):
         t.Button(mode_frame, text=C.BTN_USE_KEYBERT,
                 width=12,
                 command=lambda: self.master.change_mode("keybert")).pack(side="left", padx=C.PADDING_MEDIUM)
+                
+        t.Button(mode_frame, text=C.BTN_CHANGE_API_KEY,
+                width=12,
+                command=lambda: change_API_key()).pack(side="left", padx=C.PADDING_MEDIUM)
 
         self.content_frame = t.Frame(self, bg=C.BG_COLOR)
         self.content_frame.pack(fill="both", expand=True)
