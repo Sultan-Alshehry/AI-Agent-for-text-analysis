@@ -42,8 +42,11 @@ def get_output_text(output):
     cleaned = re.sub(r"^```json\s*|```$", "", output.strip(), 0, re.MULTILINE)
     return cleaned
 
+# Analyze text with either GenAI or KeyBERT.
+#   mode options:
+#   genai: use AI model for everything (summary, keywords, topics)
+#   keybert: use KeyBERT for keywords only (no summary or topics)
 def analyze_text(message, mode="genai", top_n_keywords=None):
-    # Analyze text using specified AI mode.
     if top_n_keywords is None:
         top_n_keywords = state.MAX_KEYWORDS
 
