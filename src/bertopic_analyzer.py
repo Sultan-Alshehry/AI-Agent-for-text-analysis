@@ -9,8 +9,6 @@ SCIENTIFIC_EMBEDDING_CANDIDATES = (
     ("sentence-transformers/scibert-base-nli-stsb-mean-tokens", "SciBERT"),
 )
 
-ALLOWED_SHORT_TOPIC_TOKENS = {"ed", "ai", "ml", "er", "icu"}
-ACRONYM_PENALTY_EXEMPT_TOKENS = {"ed", "icu"}
 BLOCKED_CHUNK_PHRASES = (
     "pdf available",
     "available at",
@@ -35,7 +33,7 @@ def load_scientific_embedding_model() -> Tuple[object, str]:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
         raise ImportError(
-            "sentence-transformers is required for hybrid scientific analysis. "
+            "sentence-transformers is required for KeyBERT + BERTopic analysis. "
             "Install with `pip install sentence-transformers`."
         ) from exc
 
@@ -179,7 +177,7 @@ def _is_valid_topic_term(term: str) -> bool:
         return False
     if any(token in MEANINGLESS_TOPIC_WORDS for token in tokens):
         return False
-    if len(tokens) == 1 and len(tokens[0]) <= 2 and tokens[0] not in ALLOWED_SHORT_TOPIC_TOKENS:
+    if len(tokens) == 1 and len(tokens[0]) <= 2:
         return False
     return True
 
@@ -191,7 +189,7 @@ def _score_topic_term(term: str, score: float) -> float:
 
     phrase_bonus = 1.5 if len(tokens) >= 2 else 0.0
     specificity_bonus = min(sum(len(token) for token in tokens) / 20.0, 1.0)
-    acronym_penalty = 0.2 if len(tokens) == 1 and len(tokens[0]) <= 3 and tokens[0] not in ACRONYM_PENALTY_EXEMPT_TOKENS else 0.0
+    acronym_penalty = 0.2 if len(tokens) == 1 and len(tokens[0]) <= 3 else 0.0
     generic_penalty = 0.7 * sum(token in GENERIC_TOPIC_LABEL_TOKENS for token in tokens)
     return float(score) + phrase_bonus + specificity_bonus - acronym_penalty - generic_penalty
 

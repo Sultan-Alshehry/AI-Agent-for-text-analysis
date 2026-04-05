@@ -56,7 +56,7 @@ class UIConstants:
     BTN_VIEW_DOCUMENTS = "View Documents"
     BTN_CHOOSE_FILE = "Choose file"
     BTN_USE_GEMINI = "Use Gemini"
-    BTN_USE_HYBRID = "Use KeyBERT + BERTopic"
+    BTN_USE_HYBRID = "Use BERTs"
     BTN_BACK = "⬅ Back"
     BTN_SAVE_RESULTS = "💾 Save Results"
     BTN_COMPARE = "Compare results"
