@@ -13,7 +13,7 @@ Text Analysis Module
 --------------------
 Core analysis module that orchestrates the text analysis pipeline:
 - Reads files (TXT, PDF)
-- Selects and validates analysis mode (Gemini or KeyBERT)
+- Selects and validates analysis mode (Gemini or Hybrid)
 - Executes analysis with fallback handling
 - Saves results to JSON
 
@@ -22,7 +22,7 @@ This module bridges file input with AI processing and result storage.
 
 
 def get_analysis_result(filepath: str, mode: str = None):
-    # Analyses the given file using the selected mode ('genai' or 'keybert').
+    # Analyses the given file using the selected mode ('genai' or 'hybrid').
     # Returns the path to the saved JSON summary.
     
     print(filepath, mode)
@@ -46,7 +46,7 @@ def get_analysis_result(filepath: str, mode: str = None):
         if "invalid" in error_msg or "authentication" in error_msg:
             print(f"Authentication error: {e}")
             print("Attempting fallback mode...")
-            fallback_mode = "keybert" if mode == "genai" else "genai"
+            fallback_mode = "hybrid" if mode == "genai" else "genai"
             try:
                 fallback_mode = validate_and_resolve_mode(fallback_mode)
                 analysis = send_prompt_online.analyze_text(text, mode=fallback_mode)

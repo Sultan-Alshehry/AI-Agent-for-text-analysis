@@ -137,9 +137,9 @@ class Dashboard(t.Frame):
                 width=12,
                 command=lambda: self.master.change_mode("genai")).pack(side="left", padx=C.PADDING_MEDIUM)
 
-        t.Button(mode_frame, text=C.BTN_USE_KEYBERT,
+        t.Button(mode_frame, text=C.BTN_USE_HYBRID,
                 width=12,
-                command=lambda: self.master.change_mode("keybert")).pack(side="left", padx=C.PADDING_MEDIUM)
+                command=lambda: self.master.change_mode("hybrid")).pack(side="left", padx=C.PADDING_MEDIUM)
                 
         t.Button(mode_frame, text=C.BTN_CHANGE_API_KEY,
                 width=12,

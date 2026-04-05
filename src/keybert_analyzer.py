@@ -1,10 +1,11 @@
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 
-# TODO: check if this is needed
+KEYBERT_MODEL_NAME = "all-MiniLM-L6-v2"
+
 # Extract keywords using KeyBERT model
 def get_keybert_keywords(
-    text: str, top_n: int = 5, ngram_range: Tuple[int, int] = (1, 2)
+    text: str, top_n: int = 5, ngram_range: Tuple[int, int] = (1, 1)
 ) -> List[Dict[str, float]]:
     try:
         from keybert import KeyBERT
@@ -14,14 +15,28 @@ def get_keybert_keywords(
             "or choose GenAI mode in send_prompt_online.analyze_text."
         ) from exc
 
-    # Mini LLM model is used for keyword extraction as it is faster and more efficient for this task
-    model = KeyBERT(model="all-MiniLM-L6-v2")
+    model = KeyBERT(model=KEYBERT_MODEL_NAME)
+    
+    # Extract words
     keywords = model.extract_keywords(
         text,
-        keyphrase_ngram_range=ngram_range,
+        keyphrase_ngram_range=(1, 1),
         stop_words="english",
-        top_n=top_n,
+        top_n=top_n * 3,
         use_maxsum=True,
+        use_mmr=True,
+        diversity=0.3,
     )
 
-    return [{"keyword": kw, "score": float(score)} for kw, score in keywords]
+    # Filter for meaningful words only
+    filtered_keywords = []
+    for kw, score in keywords:
+        if (len(kw.split()) == 1 and 
+            len(kw) > 3 and
+            not any(c.isdigit() for c in kw) and
+            kw.lower() not in ['that', 'with', 'have', 'this', 'will', 'your', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were']):
+            
+            filtered_keywords.append({"keyword": kw, "score": float(score)})
+    
+    # Return top results
+    return sorted(filtered_keywords, key=lambda x: x["score"], reverse=True)[:top_n]
