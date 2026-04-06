@@ -1,10 +1,12 @@
 from tkinter import simpledialog, messagebox
 import state
-from ai_config import set_gemini_api_key, set_analysis_mode
+from ai_config import get_mode_display_name, normalize_analysis_mode, set_gemini_api_key, set_analysis_mode
 
 def set_mode(mode: str):
-    # Switches analysis mode between 'genai' (Gemini) and 'hybrid' (KeyBERT + BERTopic).
-    # Handles API key prompt and hybrid mode availability check.
+    mode = normalize_analysis_mode(mode)
+
+    # Switches analysis mode between 'genai' (Gemini) and 'berts' (KeyBERT + BERTopic).
+    # Handles API key prompt and BERTs mode availability check.
     if mode == "genai":
         # If Gemini is not set up, prompt for API key
         if not state.API_KEY:
@@ -15,17 +17,17 @@ def set_mode(mode: str):
             if not key:
                 messagebox.showwarning(
                     "Gemini required",
-                    "Gemini API key required to use Gemini mode. Falling back to hybrid mode if available."
+                    "Gemini API key required to use Gemini mode. Falling back to BERTs mode if available."
                 )
-                # Try to switch to hybrid if Gemini key is not provided
+                # Try to switch to BERTs if Gemini key is not provided
                 try:
                     import keybert
                     import bertopic
-                    mode = "hybrid"
+                    mode = "berts"
                 except ImportError:
                     messagebox.showerror(
                         "No engine available",
-                        "Neither Gemini nor hybrid mode dependencies are available."
+                        "Neither Gemini nor BERTs mode dependencies are available."
                     )
                     return
             else:
@@ -39,7 +41,7 @@ def set_mode(mode: str):
                     messagebox.showerror("Invalid API Key", str(e))
                     return
 
-    if mode == "hybrid":
+    if mode == "berts":
         try:
             import keybert
             import bertopic
@@ -47,13 +49,13 @@ def set_mode(mode: str):
         except ImportError:
             state.KEYBERT_INSTALLED = False
             messagebox.showwarning(
-                "Hybrid mode dependencies not available",
+                "BERTs mode dependencies not available",
                 "Please install required packages: pip install keybert sentence-transformers bertopic"
             )
 
     # Update the mode in state
     set_analysis_mode(mode)
-    print(f"Switched to mode: {mode}")
+    print(f"Switched to mode: {get_mode_display_name(mode)}")
     
 def change_API_key():
     #Changes api key

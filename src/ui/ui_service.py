@@ -15,6 +15,7 @@ import tkinter as t
 from tkinter import filedialog, messagebox
 import threading
 
+from ai_config import get_mode_display_name
 from file_reader import validate_and_read_file
 from analysis import get_analysis_result, json_to_text
 from analysis_formatter import format_analysis_for_ui
@@ -62,7 +63,10 @@ class UIService:
     def handle_mode_change(app_instance, mode):
         set_mode(mode)
         app_instance.analysis_mode = state.ANALYSIS_MODE
-        messagebox.showinfo("Mode switched", f"Analysis mode set to {app_instance.analysis_mode}")
+        messagebox.showinfo(
+            "Mode switched",
+            f"Analysis mode set to {get_mode_display_name(app_instance.analysis_mode)}"
+        )
 
     @staticmethod
     def handle_analysis(filepath, analysis_callback):

@@ -3,13 +3,14 @@ from google import genai
 import json
 import re
 import state
+from ai_config import normalize_analysis_mode
 
 """
 AI Analysis Module
 ------------------
 Handles communication with AI services for text analysis:
 - Gemini (Google's generative AI): Full analysis (summary, keywords, topics)
-- Hybrid: KeyBERT for keywords + BERTopic for topics (local processing)
+- BERTs: KeyBERT for keywords + BERTopic for topics (local processing)
 
 Supports fallback between modes and format handling for both services.
 """
@@ -47,11 +48,13 @@ def get_output_text(output):
     cleaned = re.sub(r"^```json\s*|```$", "", output.strip(), 0, re.MULTILINE)
     return cleaned
 
-# Analyze text with GenAI or Hybrid (KeyBERT + BERTopic).
+# Analyze text with GenAI or BERTs (KeyBERT + BERTopic).
 #   mode options:
 #   genai: use AI model for everything (summary, keywords, topics)
-#   hybrid: use KeyBERT for keywords and BERTopic for topics (no summary)
+#   berts: use KeyBERT for keywords and BERTopic for topics (no summary)
 def analyze_text(message, mode="genai", top_n_keywords=None):
+    mode = normalize_analysis_mode(mode)
+
     if top_n_keywords is None:
         top_n_keywords = state.MAX_KEYWORDS
 
@@ -75,7 +78,7 @@ def analyze_text(message, mode="genai", top_n_keywords=None):
         )
         result["keywords"] = result["ai_keywords"]
 
-    elif mode == "hybrid":
+    elif mode == "berts":
         # Use KeyBERT for keywords and BERTopic for topics
         result["keybert_keywords"] = get_keybert_keywords(
             message, top_n=top_n_keywords
@@ -84,6 +87,6 @@ def analyze_text(message, mode="genai", top_n_keywords=None):
         result["keywords"] = result["keybert_keywords"]
 
     else:
-        raise ValueError("Invalid mode for analyze_text: choose 'genai' or 'hybrid'.")
+        raise ValueError("Invalid mode for analyze_text: choose 'genai' or 'berts'.")
 
     return result

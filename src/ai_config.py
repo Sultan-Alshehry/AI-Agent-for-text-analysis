@@ -8,14 +8,26 @@ from data_manager import DataManager
 AI Configuration Module
 -----------------------
 Handles all AI-related configuration and setup, including:
-- Analysis mode management (Gemini vs Hybrid)
+- Analysis mode management (Gemini vs BERTs)
 - Mode validation and fallback logic
 - API key management
 - Environment setup
 """
 
 
-AnalysisMode = Literal["genai", "hybrid"]
+AnalysisMode = Literal["genai", "berts"]
+LEGACY_MODE_ALIASES = {"hybrid": "berts"}
+
+
+def normalize_analysis_mode(mode: str) -> AnalysisMode:
+    normalized_mode = LEGACY_MODE_ALIASES.get(mode, mode)
+    if normalized_mode not in ("genai", "berts"):
+        raise ValueError("mode must be 'genai' or 'berts'")
+    return normalized_mode
+
+
+def get_mode_display_name(mode: str) -> str:
+    return "Gemini" if normalize_analysis_mode(mode) == "genai" else "BERTs"
 
 
 def is_keybert_available() -> bool:
@@ -36,27 +48,29 @@ def is_bertopic_available() -> bool:
         return False
 
 
-def validate_and_resolve_mode(requested_mode: AnalysisMode) -> AnalysisMode:
+def validate_and_resolve_mode(requested_mode: str) -> AnalysisMode:
+    requested_mode = normalize_analysis_mode(requested_mode)
+
     if requested_mode == "genai":
         if state.API_KEY:
             return "genai"
-        # Fallback to hybrid if Gemini key is missing and hybrid dependencies are available
+        # Fallback to BERTs if Gemini key is missing and BERTs dependencies are available
         if is_keybert_available() and is_bertopic_available():
-            print("Gemini API key not set. Falling back to hybrid mode.")
-            return "hybrid"
+            print("Gemini API key not set. Falling back to BERTs mode.")
+            return "berts"
         raise EnvironmentError(
-            "Gemini API key not set and hybrid mode dependencies (KeyBERT + BERTopic) are not available."
+            "Gemini API key not set and BERTs mode dependencies (KeyBERT + BERTopic) are not available."
         )
     
-    elif requested_mode == "hybrid":
+    elif requested_mode == "berts":
         if is_keybert_available() and is_bertopic_available():
-            return "hybrid"
-        # Fallback to genai if hybrid dependencies are not available
+            return "berts"
+        # Fallback to genai if BERTs dependencies are not available
         if state.API_KEY:
-            print("Hybrid mode dependencies not available. Falling back to Gemini.")
+            print("BERTs mode dependencies not available. Falling back to Gemini.")
             return "genai"
         raise EnvironmentError(
-            "Hybrid mode requires KeyBERT and BERTopic, and neither is available. Gemini API key also not set."
+            "BERTs mode requires KeyBERT and BERTopic, and neither is available. Gemini API key also not set."
         )
     
     else:
@@ -66,27 +80,34 @@ def validate_and_resolve_mode(requested_mode: AnalysisMode) -> AnalysisMode:
 def get_analysis_mode() -> AnalysisMode:
     # Returns current analysis mode, defaulting based on API key availability.
     # Prefers saved mode if available.
-    if state.ANALYSIS_MODE in ("genai", "hybrid"):
+    if state.ANALYSIS_MODE in ("genai", "berts", "hybrid"):
+        state.ANALYSIS_MODE = normalize_analysis_mode(state.ANALYSIS_MODE)
         return state.ANALYSIS_MODE
-    # Prefer hybrid mode if both KeyBERT and BERTopic are available
+
+    saved_mode = DataManager.get_analysis_mode()
+    if saved_mode in ("genai", "berts"):
+        state.ANALYSIS_MODE = saved_mode
+        return saved_mode
+
+    # Prefer BERTs mode if both KeyBERT and BERTopic are available
     if is_keybert_available() and is_bertopic_available():
-        state.ANALYSIS_MODE = "hybrid"
-        return "hybrid"
+        state.ANALYSIS_MODE = "berts"
+        return "berts"
     # Otherwise use genai if API key is available
     if state.API_KEY:
         state.ANALYSIS_MODE = "genai"
         return "genai"
-    # Final fallback to hybrid even if dependencies might not be available
+    # Final fallback to BERTs even if dependencies might not be available
     # (will be caught by validate_and_resolve_mode)
-    state.ANALYSIS_MODE = "hybrid"
-    return "hybrid"
+    state.ANALYSIS_MODE = "berts"
+    return "berts"
 
 
 def set_analysis_mode(mode: str) -> AnalysisMode:
-    # Set analysis mode to 'genai' or 'hybrid'.
-    if mode not in ("genai", "hybrid"):
-        raise ValueError("mode must be 'genai' or 'hybrid'")
+    # Set analysis mode to 'genai' or 'berts'.
+    mode = normalize_analysis_mode(mode)
     state.ANALYSIS_MODE = mode
+    DataManager.set_analysis_mode(mode)
     return mode
 
 
@@ -115,7 +136,7 @@ def setup_environment() -> AnalysisMode:
     if mode == "genai" and state.API_KEY:
         print("Using Gemini API for analysis.")
         return "genai"
-    if mode == "hybrid":
-        print("Using Hybrid (KeyBERT + BERTopic) for analysis.")
-        return "hybrid"
+    if mode == "berts":
+        print("Using BERTs (KeyBERT + BERTopic) for analysis.")
+        return "berts"
     
