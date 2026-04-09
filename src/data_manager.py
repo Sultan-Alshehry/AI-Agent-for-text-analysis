@@ -73,11 +73,18 @@ class DataManager:
     def get_analysis_mode(cls) -> str:
         # Get saved analysis mode from user_data.json.
         data = cls._load_data()
-        return data.get("analysis_mode", "genai")
+        mode = data.get("analysis_mode", "genai")
+        if mode == "hybrid":
+            mode = "berts"
+            data["analysis_mode"] = mode
+            cls._save_data(data)
+        return mode
     
     @classmethod
     def set_analysis_mode(cls, mode: str) -> None:
         # Save analysis mode to user_data.json.
+        if mode == "hybrid":
+            mode = "berts"
         data = cls._load_data()
         data["analysis_mode"] = mode
         cls._save_data(data)

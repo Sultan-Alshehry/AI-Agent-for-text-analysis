@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from PyPDF2 import PdfReader
+import re
 
 
 """
@@ -84,7 +85,11 @@ def __read_pdf(path: Path) -> str:
         page_text = page.extract_text() or ""
         pages.append(page_text)
 
-    return "\n".join(pages)
+    text = "\n".join(pages)
+    text = re.sub(r"-\n(?=[a-z])", "", text)
+    text = re.sub(r"(?<=[a-z])\n(?=[a-z])", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
 
 def validate_file(file_path: str) -> bool:
     path = Path(file_path)

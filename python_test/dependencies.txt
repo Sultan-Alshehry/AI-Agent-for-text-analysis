@@ -1,2 +1,15 @@
 google-genai
 requests
+PyPDF2
+keybert
+sentence-transformers
+bertopic
+numpy
+scikit-learn
+torch
+umap-learn
+hdbscan
+plotly
+pandas
+tqdm
+wordninja
