@@ -89,5 +89,7 @@ def json_to_text(file_path: str):
         summary = data.get("summary", "")
         keywords = data.get("keywords", [])
         topics = data.get("topics", [])
+        source_file = data.get("source_file")
+        mode = data.get("mode")
         
-        return summary, keywords, topics
+        return summary, keywords, topics, source_file, mode

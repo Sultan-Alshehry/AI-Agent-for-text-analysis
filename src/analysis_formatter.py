@@ -1,6 +1,14 @@
 
 import re
 
+try:
+    import wordninja
+except ImportError:
+    wordninja = None
+
+
+PRESERVED_ACRONYMS = {"ai", "api", "eu", "uk", "us", "llm", "llms", "ml", "nlp", "gpt", "gdpr"}
+
 
 def normalize(items):
     if items is None:
@@ -44,11 +52,80 @@ def _split_topic_text(topic_text):
     ]
 
 
-def normalize_keyword_labels(keywords, limit=5):
+def _compact_letters(value):
+    return re.sub(r"[^a-z]", "", value.lower())
+
+
+def _format_bert_label(label):
+    tokens = re.split(r"(\W+)", label.strip())
+    formatted_tokens = []
+
+    for token in tokens:
+        if not token:
+            continue
+        if token.isalpha():
+            lowered = token.lower()
+            if lowered in PRESERVED_ACRONYMS:
+                formatted_tokens.append(lowered.upper())
+            else:
+                formatted_tokens.append(lowered.capitalize())
+            continue
+        formatted_tokens.append(token)
+
+    return "".join(formatted_tokens)
+
+
+def _format_label_for_mode(label, mode=None):
+    cleaned = label.strip()
+    if not cleaned:
+        return cleaned
+    if mode == "berts":
+        return _format_bert_label(cleaned)
+    return cleaned
+
+
+def _restore_compact_keyword_label(label, source_text=None, max_words=5):
+    cleaned = " ".join(label.strip().split())
+    if not cleaned or not isinstance(source_text, str) or not source_text.strip():
+        return cleaned
+
+    if " " in cleaned or "-" in cleaned or not cleaned.isalpha() or not cleaned.islower() or len(cleaned) < 12:
+        return cleaned
+
+    target = _compact_letters(cleaned)
+    if not target:
+        return cleaned
+
+    source_words = re.findall(r"[A-Za-z]+", source_text)
+    for start_index in range(len(source_words)):
+        compact_candidate = ""
+        phrase_words = []
+        for word in source_words[start_index:start_index + max_words]:
+            normalized_word = _compact_letters(word)
+            if not normalized_word:
+                continue
+            compact_candidate += normalized_word
+            phrase_words.append(word.lower())
+            if compact_candidate == target and len(phrase_words) >= 2:
+                return " ".join(phrase_words)
+            if len(compact_candidate) >= len(target):
+                break
+
+    if wordninja is not None:
+        segmented_words = wordninja.split(cleaned)
+        segmented_target = "".join(word.lower() for word in segmented_words)
+        if len(segmented_words) >= 2 and segmented_target == target:
+            return " ".join(word.lower() for word in segmented_words)
+
+    return cleaned
+
+
+def normalize_keyword_labels(keywords, limit=5, source_text=None, mode=None):
     labels = []
 
     def append_label(label):
-        cleaned = label.strip()
+        cleaned = _restore_compact_keyword_label(label, source_text=source_text)
+        cleaned = _format_label_for_mode(cleaned, mode=mode)
         if not cleaned or cleaned in labels:
             return
         labels.append(cleaned)
@@ -80,11 +157,11 @@ def normalize_keyword_labels(keywords, limit=5):
     return labels
 
 
-def normalize_topic_labels(topics, limit=5):
+def normalize_topic_labels(topics, limit=5, mode=None):
     labels = []
 
     def append_label(label):
-        cleaned = label.strip()
+        cleaned = _format_label_for_mode(label, mode=mode)
         if not cleaned or cleaned.startswith("Topic ") or cleaned in labels:
             return
         labels.append(cleaned)
@@ -116,40 +193,48 @@ def normalize_topic_labels(topics, limit=5):
     return labels
 
 
-def stringify_analysis_items(items, limit=5):
+def stringify_analysis_items(items, limit=5, source_text=None, mode=None):
     if items is None:
         return ""
 
     if isinstance(items, str):
-        return items.strip()
+        return _format_label_for_mode(
+            _restore_compact_keyword_label(items, source_text=source_text),
+            mode=mode,
+        )
 
     if isinstance(items, dict):
         keyword = items.get("keyword") or items.get("key")
         if keyword is not None:
-            return str(keyword)
+            return _format_label_for_mode(
+                _restore_compact_keyword_label(str(keyword), source_text=source_text),
+                mode=mode,
+            )
 
         label = _choose_topic_label(items)
-        return label or str(items)
+        if label:
+            return _format_label_for_mode(label, mode=mode)
+        return str(items)
 
     if isinstance(items, list):
         formatted_items = []
         for item in items[:limit]:
-            text = stringify_analysis_items(item, limit=limit)
+            text = stringify_analysis_items(item, limit=limit, source_text=source_text, mode=mode)
             if text:
                 formatted_items.append(text)
         return ", ".join(formatted_items)
 
     return str(items)
 
-def format_analysis_for_ui(summary, keywords, topics):
-    keyword_labels = normalize_keyword_labels(keywords)
-    topic_labels = normalize_topic_labels(topics)
+def format_analysis_for_ui(summary, keywords, topics, source_text=None, mode=None):
+    keyword_labels = normalize_keyword_labels(keywords, source_text=source_text, mode=mode)
+    topic_labels = normalize_topic_labels(topics, mode=mode)
     summary_text = summary.strip() if isinstance(summary, str) else ""
 
     if keyword_labels:
         keywords_text = ", ".join(keyword_labels)
     else:
-        keywords_text = stringify_analysis_items(keywords)
+        keywords_text = stringify_analysis_items(keywords, source_text=source_text, mode=mode)
 
     # Format topics as bullet list
     topics_text = "No topics found"

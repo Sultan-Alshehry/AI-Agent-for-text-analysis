@@ -7,7 +7,7 @@ from summary_saver import save_summary
 from mode_switch import set_mode, change_API_key
 from analysis import json_to_text
 from ui.ui_constants import UIConstants as C
-from file_reader import validate_and_read_file
+from file_reader import read_file, validate_and_read_file
 from analysis_formatter import format_analysis_for_ui
 from ui.ui_helpers import (
     create_hero_frame, create_centered_label, create_button,
@@ -308,22 +308,31 @@ class Analysis(t.Frame):
                 mode = getattr(self.master, "analysis_mode", "genai")
                 summarys_path = a.get_analysis_result(filepath, mode=mode)
 
-                summary, keywords, topics = json_to_text(summarys_path)
-                self.update_analysis_from_text(summary, keywords, topics)
+                summary, keywords, topics, source_file, mode = json_to_text(summarys_path)
+                self.update_analysis_from_text(summary, keywords, topics, source_file=source_file, mode=mode)
             except Exception as e:
                 self.result_box.config(text=f"Error during analysis: {str(e)}")
 
         thread = threading.Thread(target=analyze)
         thread.start()
     
-    def update_analysis_from_text(self, summary, keywords, topics):
-        display_text = format_analysis_for_ui(summary, keywords, topics)
+    def update_analysis_from_text(self, summary, keywords, topics, source_file=None, mode=None):
+        source_text = None
+        if isinstance(source_file, str) and source_file.strip():
+            try:
+                source_text = read_file(source_file)
+            except Exception:
+                source_text = None
+
+        display_text = format_analysis_for_ui(summary, keywords, topics, source_text=source_text, mode=mode)
         self.result_box.config(text=display_text)
         
         self.current_results = {
             "summary": summary,
             "keywords": keywords,
-            "topics": topics
+            "topics": topics,
+            "source_file": source_file,
+            "mode": mode,
         }
 
     def save_results(self):

@@ -16,7 +16,7 @@ from tkinter import filedialog, messagebox
 import threading
 
 from ai_config import get_mode_display_name
-from file_reader import validate_and_read_file
+from file_reader import read_file, validate_and_read_file
 from analysis import get_analysis_result, json_to_text
 from analysis_formatter import format_analysis_for_ui
 from summary_saver import save_summary
@@ -74,8 +74,8 @@ class UIService:
             try:
                 mode = state.ANALYSIS_MODE
                 summarys_path = get_analysis_result(filepath, mode=mode)
-                summary, keywords, topics = json_to_text(summarys_path)
-                analysis_callback(summary, keywords, topics)
+                summary, keywords, topics, source_file, analysis_mode = json_to_text(summarys_path)
+                analysis_callback(summary, keywords, topics, source_file, analysis_mode)
             except Exception as e:
                 analysis_callback(None, None, f"Error during analysis: {str(e)}")
 
@@ -83,11 +83,18 @@ class UIService:
         thread.start()
 
     @staticmethod
-    def format_analysis_results(summary, keywords, topics):
+    def format_analysis_results(summary, keywords, topics, source_file=None, mode=None):
         if summary is None:  
             return keywords  
-        
-        return format_analysis_for_ui(summary, keywords, topics)
+
+        source_text = None
+        if isinstance(source_file, str) and source_file.strip():
+            try:
+                source_text = read_file(source_file)
+            except Exception:
+                source_text = None
+
+        return format_analysis_for_ui(summary, keywords, topics, source_text=source_text, mode=mode)
 
     @staticmethod
     def handle_save_results(results_dict, filepath=None):

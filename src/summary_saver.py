@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 from analysis_formatter import normalize_keyword_labels, normalize_topic_labels, stringify_analysis_items
+from file_reader import read_file
 
 
 def _ensure_parent_dir(path: Path) -> None:
@@ -30,9 +31,18 @@ def save_summary(
             if isinstance(summary_text, str) and summary_text.strip():
                 f.write(f"Summary: {summary_text.strip()}\n\n")
 
-            keyword_labels = normalize_keyword_labels(summary.get("keywords", []))
-            keywords_text = ", ".join(keyword_labels) if keyword_labels else stringify_analysis_items(summary.get("keywords", []))
-            topic_labels = normalize_topic_labels(summary.get("topics", []))
+            source_text = None
+            source_file = summary.get("source_file")
+            mode = summary.get("mode")
+            if isinstance(source_file, str) and source_file.strip():
+                try:
+                    source_text = read_file(source_file)
+                except Exception:
+                    source_text = None
+
+            keyword_labels = normalize_keyword_labels(summary.get("keywords", []), source_text=source_text, mode=mode)
+            keywords_text = ", ".join(keyword_labels) if keyword_labels else stringify_analysis_items(summary.get("keywords", []), source_text=source_text, mode=mode)
+            topic_labels = normalize_topic_labels(summary.get("topics", []), mode=mode)
             topics_text = "\n".join(f"- {label}" for label in topic_labels) if topic_labels else "No topics found"
             f.write(f"Keywords: {keywords_text}\n\n")
             f.write(f"Topics: {topics_text}\n")

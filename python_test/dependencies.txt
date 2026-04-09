@@ -12,3 +12,4 @@ hdbscan
 plotly
 pandas
 tqdm
+wordninja
