@@ -133,10 +133,10 @@ def setup_environment() -> AnalysisMode:
         state.API_KEY = saved_key
     
     mode = get_analysis_mode()
-    if mode == "genai" and state.API_KEY:
-        print("Using Gemini API for analysis.")
+    state.ANALYSIS_MODE = mode
+
+    if mode == "genai":
         return "genai"
-    if mode == "berts":
-        print("Using BERTs (KeyBERT + BERTopic) for analysis.")
-        return "berts"
+
+    return "berts"
     
