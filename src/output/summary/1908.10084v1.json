@@ -1,0 +1,8 @@
+{
+  "summary": "Sentence-BERT (SBERT) modifies the BERT architecture using siamese and triplet networks to generate semantically meaningful sentence embeddings. It enables efficient comparison via cosine-similarity, drastically reducing computational overhead for tasks like clustering and semantic search from hours to seconds. SBERT outperforms previous state-of-the-art methods on Semantic Textual Similarity (STS) benchmarks and transfer learning tasks.",
+  "keywords": "Sentence-BERT, Siamese Networks, Sentence Embeddings, Semantic Textual Similarity, NLP",
+  "topics": "Natural Language Processing, Machine Learning, Information Retrieval",
+  "token_count": 14499,
+  "mode": "genai",
+  "source_file": "C:\\BAC\\1908.10084v1.pdf"
+}

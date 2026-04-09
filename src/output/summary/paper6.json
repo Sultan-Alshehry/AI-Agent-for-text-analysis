@@ -1,0 +1,29 @@
+{
+  "summary": "",
+  "keywords": [
+    {
+      "keyword": "processing texts",
+      "score": 0.4996
+    },
+    {
+      "keyword": "score paraphrase_mining",
+      "score": 0.5111
+    },
+    {
+      "keyword": "semantic similarity",
+      "score": 0.5184
+    },
+    {
+      "keyword": "news corpus",
+      "score": 0.5217
+    },
+    {
+      "keyword": "bert extraction",
+      "score": 0.5399
+    }
+  ],
+  "topics": [],
+  "token_count": null,
+  "mode": "keybert",
+  "source_file": "C:\\Users\\Pihla\\Downloads\\paper6.pdf"
+}

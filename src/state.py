@@ -5,6 +5,7 @@ DEFAULT_SUMMARY_PATH = (
 )
 API_KEY = ""
 KEYBERT_INSTALLED = False
+ANALYSIS_MODE = ""
 
 # initial values only, later will be assigned in a function based
 # on the file word count
@@ -20,3 +21,4 @@ JSON_FORMAT = {
 }
 
 AI_MODEL = "gemini-3-flash-preview"
+#AI_MODEL = "gemini-3.1-flash-lite-preview"
