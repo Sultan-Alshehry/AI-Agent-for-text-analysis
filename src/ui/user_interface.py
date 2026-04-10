@@ -9,6 +9,7 @@ from analysis import json_to_text
 from ui.ui_constants import UIConstants as C
 from file_reader import read_file, validate_and_read_file
 from analysis_formatter import format_analysis_for_ui
+from ui.ui_service import UIService
 from ui.ui_helpers import (
     create_hero_frame, create_centered_label, create_button,
     create_upload_box, create_info_label, create_stat_box
@@ -369,6 +370,10 @@ class Analysis(t.Frame):
 class Compare(t.Frame):
     def __init__(self, master, total_docs, analysed_docs, ready_compare):
         super().__init__(master, bg=C.BG_COLOR)
+
+        t.Button(self, text=C.BTN_BACK,
+            command=lambda: master.show_frame(Dashboard)
+            ).pack(anchor="nw")
         
         self.analysed_docs = analysed_docs
         self.total_docs = total_docs
@@ -377,7 +382,6 @@ class Compare(t.Frame):
         
         self.selected_amount = 0
         self.files_to_compare = []
-        # self.enough_selected_documents = False
         
         self.label = t.Label(self, text=C.LABEL_SELECT_COMPARE,
                              fg=C.TEXT_COLOR, bg=C.BG_COLOR,
@@ -389,45 +393,121 @@ class Compare(t.Frame):
         )
 
         self.result_box.pack(pady=C.PADDING_LARGE)
+
+        self.scroll_frame = t.Frame(self, bg=C.BG_COLOR)
+        self.scroll_frame.pack()
         
-        self.file_container = t.Frame(self, bg=C.BG_COLOR)
-        self.file_container.pack()
+        self.canvas = t.Canvas(self.scroll_frame, bg=C.BOX_COLOR, height=120, width=300,
+                               highlightthickness=0)
+        scrollbar = t.Scrollbar(self.scroll_frame, orient="vertical", command=self.canvas.yview)
+        self.file_container = t.Frame(self.canvas, bg=C.BOX_COLOR)
+        self.file_container.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.file_container, anchor="nw", width=300)
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.clear_btn = t.Button(self, text="Clear",
+                                  command=self.refresh)
         
         self.selected_files = t.Frame(self, bg=C.BG_COLOR)
         self.selected_files.pack(pady=C.PADDING_MEDIUM)
         
-        self.selected_box = t.Label(self.selected_files, text="selected documents",
+        self.selected_box = t.Label(self.selected_files, text="Selected documents",
                              fg=C.TEXT_COLOR, bg=C.BG_COLOR,
                              font=C.FONT_NORMAL)
         self.selected_box.pack() 
-        
-        t.Button(self, text=C.BTN_BACK,
-            command=lambda: master.show_frame(Dashboard)
-            ).pack(anchor="nw")
+        self.compare_btn = None
         
 
     def select_document(self, file):
+        # Add files to comparison selection and update UI accordingly.
+        if file in self.files_to_compare:
+            return
         
         if self.selected_amount < 2:
             t.Label(self.selected_files, text = file.split("/")[-1],
             fg=C.TEXT_COLOR, bg=C.BG_COLOR, font=C.FONT_SMALL).pack(pady=C.PADDING_MEDIUM)
             self.files_to_compare.append(file)
             self.selected_amount = self.selected_amount + 1
+
+            if self.selected_amount == 1:
+                self.clear_btn.pack(pady=C.PADDING_SMALL)
             
         
         if self.selected_amount == 2:
-            t.Button(self.selected_files,
+            self.compare_btn = t.Button(
+                    self.selected_files,
                     text=C.BTN_COMPARE,
                     command=lambda f=self.files_to_compare: self.perform_comparison(f)
-                    ).pack(pady=C.PADDING_SMALL)
-            self.selected_amount = self.selected_amount + 1
+            )
+            self.compare_btn.pack(pady=C.PADDING_SMALL)
+            self.selected_amount += 1
     
 
     def perform_comparison(self, files):
+        # Validate selection.
+        validation = UIService.handle_compare_selection(files)
+        if not validation["valid"]:
+            messagebox.showwarning("Invalid selection", validation["message"])
+            return
         # Execute comparison analysis on selected documents.
-        # TODO: Implement document comparison logic
-        pass
+        results = UIService.perform_document_comparison(files)
+        if results.get("status") == "error":
+            messagebox.showerror("Error", results["message"])
+        else:
+            self.display_comparison(results)
+
+
+    def display_comparison(self, results):
+        # Display comparison results and hide file selection UI.
+        self.label.config(text=C.LABEL_COMPARISON_RESULTS)
+        self.label.pack_forget()
+
+        for widget in self.file_container.winfo_children():
+            widget.destroy()
+        self.scroll_frame.pack_forget()
+        if self.compare_btn:
+            self.compare_btn.pack_forget()
+
+        self.result_box.pack_forget()
+        self.selected_files.pack_forget()
+        self.clear_btn.pack_forget()
+
+        self.label.pack(pady=C.PADDING_MEDIUM)
+        self.result_box.pack(pady=C.PADDING_LARGE)
+        self.clear_btn.pack(pady=C.PADDING_SMALL)
+
+        common_keywords = results.get("common_keywords", [])
+        common_topics = results.get("common_topics", [])
+        per_document = results.get("per_document", [])
+
+        common_keywords_display = "\n".join(f"- {keyword}" for keyword in common_keywords) or "No common keywords"
+        common_topics_display = "\n".join(f"- {topic}" for topic in common_topics) or "No common topics"
+        per_document_display = ""
+        for document in per_document:
+            unique_keywords = "\n".join(f"  - {keyword}" for keyword in document["unique_keywords"]) or "  No unique keywords"
+            unique_topics = "\n".join(f"  - {topic}" for topic in document["unique_topics"]) or "  No unique topics"
+            per_document_display += (
+                f"\n{document['file']}:\n\n"
+                f"  UNIQUE KEYWORDS:\n{unique_keywords}\n\n"
+                f"  UNIQUE TOPICS:\n{unique_topics}\n"
+            )
+
+        display_text = (
+            f"COMMON KEYWORDS:\n{common_keywords_display}\n\n"
+            f"COMMON TOPICS:\n{common_topics_display}\n\n"
+            f"UNIQUE PER DOCUMENT:\n{per_document_display}"
+        )
+        self.result_box.config(text=display_text)
+
+
     def refresh(self):
+        # Build and display the selection UI.
         for widget in self.file_container.winfo_children():
             widget.destroy()
 
@@ -437,15 +517,25 @@ class Compare(t.Frame):
 
         self.selected_amount = 0
         self.files_to_compare = []
+        self.clear_btn.pack_forget()
+
+        self.result_box.pack_forget()
+        self.scroll_frame.pack_forget()
+        self.selected_files.pack_forget()
+        self.label.config(text=C.LABEL_SELECT_COMPARE)
+        self.label.pack(pady=C.PADDING_MEDIUM)
+        self.scroll_frame.pack()
+        self.selected_files.pack(pady=C.PADDING_MEDIUM)
 
         if int(self.analysed_docs.get()) < 2:
-            self.result_box.config(text="Not enough analysed documents to perform comparison")
+            t.Label(self.file_container,
+                    text="Analyze at least 2 files before comparing",
+                    fg=C.TEXT_COLOR, bg=C.BOX_COLOR,
+                    font=C.FONT_SMALL).pack(pady=C.PADDING_MEDIUM)
             return
 
-        self.result_box.config(text="Choose 2 documents to compare:")
-
         t.Label(self.file_container, text="Uploaded Files",
-                fg=C.TEXT_COLOR, bg=C.BG_COLOR,
+                fg=C.TEXT_COLOR, bg=C.BOX_COLOR,
                 font=C.FONT_SMALL).pack(pady=C.PADDING_MEDIUM)
 
         for file in self.master.files:
