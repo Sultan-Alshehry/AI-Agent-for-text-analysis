@@ -21,6 +21,7 @@ from analysis import get_analysis_result, json_to_text
 from analysis_formatter import format_analysis_for_ui
 from summary_saver import save_summary
 from mode_switch import set_mode
+from comparison import compare_results
 import state
 
 
@@ -139,15 +140,10 @@ class UIService:
         return {"valid": True, "message": "Ready to compare"}
 
     @staticmethod
-    def perform_document_comparison(file1_path, file2_path):
+    def perform_document_comparison(filepaths):
         try:
-            # TODO: Implement actual comparison logic
-            # For now, return placeholder
-            return {
-                "status": "success",
-                "message": "Comparison feature coming soon",
-                "file1": file1_path,
-                "file2": file2_path
-            }
+            return compare_results(filepaths)
+        except FileNotFoundError as e:
+            return {"status": "error", "message": str(e)}
         except Exception as e:
             return {"status": "error", "message": str(e)}
