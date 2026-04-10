@@ -28,6 +28,7 @@ TOPIC_WINDOW_STEP = 30
 
 
 @lru_cache(maxsize=1)
+# Load one scientific embedding model and reuse it across runs
 def load_scientific_embedding_model() -> Tuple[object, str]:
     try:
         from sentence_transformers import SentenceTransformer
@@ -38,13 +39,9 @@ def load_scientific_embedding_model() -> Tuple[object, str]:
         ) from exc
 
     load_errors = []
-    for index, (model_name, model_label) in enumerate(SCIENTIFIC_EMBEDDING_CANDIDATES):
+    for model_name, _model_label in SCIENTIFIC_EMBEDDING_CANDIDATES:
         try:
             model = SentenceTransformer(model_name)
-            if index > 0:
-                print(f"Using fallback scientific embedding model: {model_label} ({model_name})")
-            else:
-                print(f"Using scientific embedding model: {model_label} ({model_name})")
             return model, model_name
         except Exception as exc:
             load_errors.append(f"{model_name}: {exc}")
@@ -89,7 +86,6 @@ REFERENCE_SECTION_PATTERNS = (
     r'(?im)^appendix(?:es)?\s*$'
 )
 
-
 def _trim_scientific_tail_sections(text: str) -> str:
     cut_index = len(text)
     for pattern in REFERENCE_SECTION_PATTERNS:
@@ -99,14 +95,17 @@ def _trim_scientific_tail_sections(text: str) -> str:
     return text[:cut_index]
 
 
+# Normalize tokens
 def _normalize_token(token: str) -> str:
     return re.sub(r'[^a-z]', '', token.lower())
 
 
+# Split a topic phrase into normalized tokens
 def _normalized_topic_tokens(term: str) -> List[str]:
     return [_normalize_token(token) for token in term.split() if _normalize_token(token)]
 
 
+# Clean scientific text before topic modeling
 def _clean_scientific_text(text: str) -> str:
     text = _trim_scientific_tail_sections(text)
     text = re.sub(r'\b10\.\d{4,9}/[^\s]+', '', text)
@@ -123,6 +122,7 @@ def _clean_scientific_text(text: str) -> str:
     return text
 
 
+# Filter out chunks that are too weak or too noisy for topics
 def _is_informative_chunk(chunk: str) -> bool:
     words = chunk.split()
     if len(words) < MIN_CHUNK_WORDS:
@@ -151,6 +151,7 @@ def _is_informative_chunk(chunk: str) -> bool:
     return True
 
 
+# Build topic-sized text chunks from sentences or sliding windows
 def _build_topic_chunks(text: str) -> List[str]:
     sentence_candidates = [
         sentence.strip()
@@ -171,6 +172,7 @@ def _build_topic_chunks(text: str) -> List[str]:
     return filtered_windows or sentences
 
 
+# Reject topic terms that are too generic or too small
 def _is_valid_topic_term(term: str) -> bool:
     tokens = _normalized_topic_tokens(term)
     if not tokens:
@@ -182,6 +184,7 @@ def _is_valid_topic_term(term: str) -> bool:
     return True
 
 
+# Score topic terms so more useful labels rise to the top
 def _score_topic_term(term: str, score: float) -> float:
     tokens = _normalized_topic_tokens(term)
     if not tokens:
@@ -194,6 +197,7 @@ def _score_topic_term(term: str, score: float) -> float:
     return float(score) + phrase_bonus + specificity_bonus - acronym_penalty - generic_penalty
 
 
+# Rank topic keywords and keep the best labels
 def _rank_topic_terms(topic_words: List[tuple]) -> List[str]:
     ranked_candidates = []
     seen_terms = set()
@@ -228,6 +232,7 @@ def _rank_topic_terms(topic_words: List[tuple]) -> List[str]:
     return ranked_terms
 
 
+# Skip topics that mostly look like author-name pairs
 def _looks_like_author_topic(keywords: List[str]) -> bool:
     phrases = [keyword for keyword in keywords[:3] if len(_normalized_topic_tokens(keyword)) == 2]
     if len(phrases) < 2:
@@ -244,6 +249,7 @@ def _looks_like_author_topic(keywords: List[str]) -> bool:
     return True
 
 
+# Build the final topic object returned to the app
 def _build_topic_result(topic_id: int, count: int, keywords: List[str]) -> Dict[str, Any]:
     return {
         "topic_id": topic_id,
@@ -254,6 +260,7 @@ def _build_topic_result(topic_id: int, count: int, keywords: List[str]) -> Dict[
     }
 
 
+# Extract and sort the best topic results from BERTopic output
 def _extract_ranked_topics(topic_model: Any, topic_info: Any, top_n_topics: int) -> List[Dict[str, Any]]:
     results = []
     for _, row in topic_info.iterrows():
@@ -279,7 +286,7 @@ def _extract_ranked_topics(topic_model: Any, topic_info: Any, top_n_topics: int)
     )
     return results
 
-# Extract topics using BERTopic model
+# Run BERTopic and return cleaned topic results
 def get_bertopic_topics(
     text: str, top_n_topics: int = 5, min_topic_size: int = 2
 ) -> List[Dict[str, Any]]:
@@ -290,7 +297,7 @@ def get_bertopic_topics(
             "BERTopic is not installed. Install with `pip install bertopic sentence-transformers`"
         ) from exc
 
-    embedding_model, embedding_model_name = load_scientific_embedding_model()
+    embedding_model, _embedding_model_name = load_scientific_embedding_model()
 
     text = _clean_scientific_text(text)
     sentences = _build_topic_chunks(text)
@@ -308,13 +315,12 @@ def get_bertopic_topics(
         )
 
         # Fit and transform
-        topics, probs = topic_model.fit_transform(sentences)
+        topic_model.fit_transform(sentences)
         
         # Get topic info
         topic_info = topic_model.get_topic_info()
         return _extract_ranked_topics(topic_model, topic_info, top_n_topics)
         
-    except Exception as e:
-        print(f"BERTopic error with embedding model {embedding_model_name}: {e}")
+    except Exception:
         return []
     

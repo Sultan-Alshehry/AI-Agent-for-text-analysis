@@ -4,6 +4,16 @@ import json
 import re
 import state
 from ai_config import normalize_analysis_mode
+from sustainability_metrics import (
+    build_token_usage,
+    extract_ecologits_metrics,
+    run_with_codecarbon_tracking,
+)
+
+try:
+    from ecologits import EcoLogits
+except ImportError:
+    EcoLogits = None
 
 """
 AI Analysis Module
@@ -25,9 +35,25 @@ try:
 except ImportError:
     from bertopic_analyzer import get_bertopic_topics
 
+# Global flag to track EcoLogits initialization
+_ECOLOGITS_INITIALIZED = False
+
+def _initialize_ecologits():
+    global _ECOLOGITS_INITIALIZED
+
+    if _ECOLOGITS_INITIALIZED or EcoLogits is None:
+        return
+
+    try:
+        EcoLogits.init(providers=["google_genai"])
+        _ECOLOGITS_INITIALIZED = True
+    except Exception:
+        _ECOLOGITS_INITIALIZED = False
+
 
 def get_output(message):
     # Send text to Gemini API for analysis and return response.
+    _initialize_ecologits()
     client = genai.Client(api_key=state.API_KEY)
     response = client.models.generate_content(
         model=state.AI_MODEL,
@@ -65,6 +91,8 @@ def analyze_text(message, mode="genai", top_n_keywords=None):
         "keybert_keywords": [],
         "keywords": [],
         "token_count": None,
+        "token_usage": build_token_usage(None),
+        "sustainability_metrics": {},
     }
 
     if mode == "genai":
@@ -73,18 +101,28 @@ def analyze_text(message, mode="genai", top_n_keywords=None):
         result["summary"] = parsed.get("summary", "")
         result["ai_keywords"] = parsed.get("keywords", [])
         result["topics"] = parsed.get("topics", [])
-        result["token_count"] = getattr(
-            getattr(response, "usage_metadata", None), "total_token_count", None
+        result["token_usage"] = build_token_usage(getattr(response, "usage_metadata", None))
+        result["token_count"] = result["token_usage"].get("total_tokens")
+        result["sustainability_metrics"] = extract_ecologits_metrics(
+            getattr(response, "impacts", None)
         )
         result["keywords"] = result["ai_keywords"]
 
     elif mode == "berts":
         # Use KeyBERT for keywords and BERTopic for topics
-        result["keybert_keywords"] = get_keybert_keywords(
-            message, top_n=top_n_keywords
+        def run_local_analysis():
+            keywords = get_keybert_keywords(message, top_n=top_n_keywords)
+            topics = get_bertopic_topics(message)
+            return keywords, topics
+
+        tracked_result, sustainability_metrics = run_with_codecarbon_tracking(
+            run_local_analysis
         )
-        result["topics"] = get_bertopic_topics(message)
+        if tracked_result is None:
+            tracked_result = run_local_analysis()
+        result["keybert_keywords"], result["topics"] = tracked_result
         result["keywords"] = result["keybert_keywords"]
+        result["sustainability_metrics"] = sustainability_metrics
 
     else:
         raise ValueError("Invalid mode for analyze_text: choose 'genai' or 'berts'.")

@@ -9,6 +9,7 @@ from analysis import json_to_text
 from ui.ui_constants import UIConstants as C
 from file_reader import read_file, validate_and_read_file
 from analysis_formatter import format_analysis_for_ui
+from sustainability_metrics import format_sustainability_for_ui
 from ui.ui_service import UIService
 from ui.ui_helpers import (
     create_hero_frame, create_centered_label, create_button,
@@ -53,7 +54,7 @@ class AityApp(t.Tk):
         self.ready_to_compare_docs = t.StringVar(value="❌")
 
         # Initialize frames 
-        for F in (Dashboard, FileSelection, Analysis, Compare):
+        for F in (Dashboard, FileSelection, Analysis, Compare, InfoHelp):
             frame = F(self, self.total_docs, self.analysed_docs, self.ready_to_compare_docs)
             self.frames[F] = frame
             frame.place(relwidth=1, relheight=1)
@@ -145,6 +146,13 @@ class Dashboard(t.Frame):
         t.Button(mode_frame, text=C.BTN_CHANGE_API_KEY,
                 width=12,
                 command=lambda: change_API_key()).pack(side="left", padx=C.PADDING_MEDIUM)
+
+        info_frame = t.Frame(btn_frame, bg=C.BG_COLOR)
+        info_frame.grid(row=3, column=0, columnspan=3, pady=C.PADDING_SMALL)
+
+        t.Button(info_frame, text=C.BTN_INFO_HELP,
+                width=12,
+                command=lambda: self.master.show_frame(InfoHelp)).pack()
 
         self.content_frame = t.Frame(self, bg=C.BG_COLOR)
         self.content_frame.pack(fill="both", expand=True)
@@ -285,6 +293,17 @@ class Analysis(t.Frame):
         )
         self.result_box.pack(pady=C.PADDING_LARGE)
 
+        self.sustainability_box = t.Label(
+            self,
+            bg=C.BOX_COLOR,
+            fg=C.TEXT_COLOR,
+            justify="left",
+            padx=C.PADDING_LARGE,
+            pady=C.PADDING_LARGE,
+            wraplength=500,
+        )
+        self.sustainability_box.pack(pady=(0, C.PADDING_LARGE))
+
         # Button frame for Back and Save buttons
         button_frame = t.Frame(self, bg=C.BG_COLOR)
         button_frame.pack(anchor="nw", pady=C.PADDING_MEDIUM)
@@ -302,6 +321,7 @@ class Analysis(t.Frame):
         # Initiate analysis for the selected file.
         self.current_filepath = filepath
         self.result_box.config(text="Analyzing... Please wait.")
+        self.sustainability_box.config(text="Collecting sustainability metrics...")
         self.update()  
 
         def analyze():
@@ -309,15 +329,23 @@ class Analysis(t.Frame):
                 mode = getattr(self.master, "analysis_mode", "genai")
                 summarys_path = a.get_analysis_result(filepath, mode=mode)
 
-                summary, keywords, topics, source_file, mode = json_to_text(summarys_path)
-                self.update_analysis_from_text(summary, keywords, topics, source_file=source_file, mode=mode)
+                summary, keywords, topics, source_file, mode, sustainability = json_to_text(summarys_path)
+                self.update_analysis_from_text(
+                    summary,
+                    keywords,
+                    topics,
+                    source_file=source_file,
+                    mode=mode,
+                    sustainability=sustainability,
+                )
             except Exception as e:
                 self.result_box.config(text=f"Error during analysis: {str(e)}")
+                self.sustainability_box.config(text="Sustainability metrics unavailable.")
 
         thread = threading.Thread(target=analyze)
         thread.start()
     
-    def update_analysis_from_text(self, summary, keywords, topics, source_file=None, mode=None):
+    def update_analysis_from_text(self, summary, keywords, topics, source_file=None, mode=None, sustainability=None):
         source_text = None
         if isinstance(source_file, str) and source_file.strip():
             try:
@@ -327,6 +355,7 @@ class Analysis(t.Frame):
 
         display_text = format_analysis_for_ui(summary, keywords, topics, source_text=source_text, mode=mode)
         self.result_box.config(text=display_text)
+        self.sustainability_box.config(text=format_sustainability_for_ui(sustainability))
         
         self.current_results = {
             "summary": summary,
@@ -334,6 +363,7 @@ class Analysis(t.Frame):
             "topics": topics,
             "source_file": source_file,
             "mode": mode,
+            "sustainability": sustainability,
         }
 
     def save_results(self):
@@ -547,6 +577,136 @@ class Compare(t.Frame):
                     ).pack(pady=C.PADDING_SMALL)
         
         
+
+# ---------------- INFO / HELP SCREEN ---------------- #
+class InfoHelp(t.Frame):
+    def __init__(self, master, total_docs, analysed_docs, ready_compare):
+        super().__init__(master, bg=C.BG_COLOR)
+
+        # Header
+        t.Label(self, text=C.LABEL_INFO_HELP,
+                fg=C.TEXT_COLOR, bg=C.BG_COLOR,
+                font=C.FONT_TITLE).pack(pady=C.PADDING_MEDIUM)
+
+        # Scrollable content area
+        container = t.Frame(self, bg=C.BG_COLOR)
+        container.pack(fill="both", expand=True, padx=C.PADDING_LARGE)
+
+        canvas = t.Canvas(container, bg=C.BG_COLOR, highlightthickness=0)
+        scrollbar = t.Scrollbar(container, orient="vertical", command=canvas.yview)
+
+        self.content = t.Frame(canvas, bg=C.BG_COLOR)
+        self.content.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=self.content, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Enable mouse wheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        self._build_content()
+
+        # Back button
+        t.Button(self, text=C.BTN_BACK,
+                 command=lambda: master.show_frame(Dashboard)
+                 ).pack(anchor="nw", pady=C.PADDING_MEDIUM, padx=C.PADDING_LARGE)
+
+    def _build_content(self):
+        wrap = 500
+
+        # ---------- Gemini Section ---------- #
+        self._section_header("Gemini (Online Mode)")
+
+        self._section_text(
+            "Gemini is Google's large language model accessed via the Gemini API. "
+            "It performs summarization, keyword extraction, and topic modeling "
+            "by sending your document text to Google's servers for processing.\n\n"
+            "API Key: To use Gemini you need a valid Google Gemini API key. "
+            "The key is stored locally and sent with each request to authenticate "
+            "your access. You can change the key at any time from the dashboard.\n\n"
+            "Advantages:\n"
+            "• High-quality, context-aware summaries and analysis\n"
+            "• No local model downloads or heavy compute needed\n"
+            "• Handles large and complex documents well\n\n"
+            "Disadvantages:\n"
+            "• Requires an internet connection\n"
+            "• Depends on a third-party API (usage limits may apply)\n"
+            "• Document text is sent externally, which may raise privacy concerns",
+            wrap,
+        )
+
+        # ---------- BERTs Section ---------- #
+        self._section_header("BERTs (Local Mode)")
+
+        self._section_text(
+            "BERTs mode uses two locally-run transformer models:\n\n"
+            "• KeyBERT – extracts keywords and key phrases using BERT embeddings.\n"
+            "• BERTopic – discovers topics by clustering document embeddings.\n\n"
+            "Local Model Downloading: The first time you use BERTs mode, the "
+            "required models are automatically downloaded from Hugging Face. "
+            "This is a one-time process; subsequent runs use the cached models.\n\n"
+            "Storage & Memory: The downloaded models require approximately "
+            "400–500 MB of disk space. During analysis, they are loaded into "
+            "RAM (or GPU memory if available), so a machine with at least "
+            "4 GB of free RAM is recommended.\n\n"
+            "Advantages:\n"
+            "• Fully offline – no internet needed after initial download\n"
+            "• Data stays on your machine (privacy-friendly)\n"
+            "• No API key or external account required\n\n"
+            "Disadvantages:\n"
+            "• Initial model download can take a few minutes\n"
+            "• Requires more local disk space and memory\n"
+            "• Summaries are less rich compared to a large language model",
+            wrap,
+        )
+
+        # ---------- Sustainability Metrics Section ---------- #
+        self._section_header("Sustainability Metrics")
+
+        self._section_text(
+            "AITY tracks the environmental footprint of each analysis run "
+            "using two open-source libraries:\n\n"
+            "• CodeCarbon – monitors local energy consumption (CPU/GPU power "
+            "draw and duration) during BERTs mode and converts it to estimated "
+            "CO₂ equivalent emissions.\n\n"
+            "• EcoLogits – estimates the energy and carbon cost of API-based "
+            "inference calls when using Gemini mode.\n\n"
+            "The sustainability panel shown after each analysis displays "
+            "metrics such as energy consumed (kWh) and CO₂e emissions (mg).\n\n"
+            "Note: These sustainability metrics are estimates based on local "
+            "compute tracking or API inference estimation and should be "
+            "interpreted as indicative rather than exact.",
+            wrap,
+        )
+
+    def _section_header(self, text):
+        t.Label(
+            self.content, text=text,
+            fg=C.TEXT_COLOR, bg=C.BG_COLOR,
+            font=C.FONT_HEADER,
+        ).pack(anchor="w", pady=(C.PADDING_MEDIUM, C.PADDING_SMALL))
+
+    def _section_text(self, text, wraplength):
+        box = t.Frame(self.content, bg=C.BOX_COLOR)
+        box.pack(fill="x", pady=(0, C.PADDING_MEDIUM))
+        t.Label(
+            box, text=text,
+            fg=C.TEXT_COLOR, bg=C.BOX_COLOR,
+            justify="left",
+            wraplength=wraplength,
+            padx=C.PADDING_MEDIUM, pady=C.PADDING_MEDIUM,
+        ).pack(fill="x")
+
+
 # ---------------- RUN APP ---------------- #
 if __name__ == "__main__":
     app = AityApp()

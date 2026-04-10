@@ -1,12 +1,10 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 KEYBERT_MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Extract keywords using KeyBERT model
-def get_keybert_keywords(
-    text: str, top_n: int = 5, ngram_range: Tuple[int, int] = (1, 1)
-) -> List[Dict[str, float]]:
+def get_keybert_keywords(text: str, top_n: int = 5) -> List[Dict[str, float]]:
     try:
         from keybert import KeyBERT
     except ImportError as exc:

@@ -62,3 +62,5 @@ class UIConstants:
     BTN_SAVE_RESULTS = "💾 Save Results"
     BTN_COMPARE = "Compare results"
     BTN_CHANGE_API_KEY = "Change API key"
+    BTN_INFO_HELP = "❓ Info / Help"
+    LABEL_INFO_HELP = "Info / Help"
