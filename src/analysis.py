@@ -5,6 +5,7 @@ import summary_saver
 import send_prompt_online
 from ai_config import get_analysis_mode, validate_and_resolve_mode
 from file_reader import read_file
+from sustainability_metrics import SustainabilityRunTracker
 import state
 
 
@@ -24,8 +25,7 @@ This module bridges file input with AI processing and result storage.
 def get_analysis_result(filepath: str, mode: str = None):
     # Analyses the given file using the selected mode ('genai' or 'berts').
     # Returns the path to the saved JSON summary.
-    
-    print(filepath, mode)
+
     if mode is None:
         mode = get_analysis_mode()
 
@@ -36,6 +36,7 @@ def get_analysis_result(filepath: str, mode: str = None):
     text = read_file(filepath)
     if not text.strip():
         raise ValueError("Input file is empty")
+    run_tracker = SustainabilityRunTracker(filepath=filepath, text=text)
 
     # Analyze with selected mode
     try:
@@ -44,8 +45,6 @@ def get_analysis_result(filepath: str, mode: str = None):
         # Handle authentication errors with fallback
         error_msg = str(e).lower()
         if "invalid" in error_msg or "authentication" in error_msg:
-            print(f"Authentication error: {e}")
-            print("Attempting fallback mode...")
             fallback_mode = "berts" if mode == "genai" else "genai"
             try:
                 fallback_mode = validate_and_resolve_mode(fallback_mode)
@@ -64,8 +63,13 @@ def get_analysis_result(filepath: str, mode: str = None):
         "keywords": analysis.get("keywords", []),
         "topics": analysis.get("topics", []),
         "token_count": analysis.get("token_count"),
+        "token_usage": analysis.get("token_usage"),
         "mode": mode,
         "source_file": str(Path(filepath).resolve()),
+        "sustainability": run_tracker.finalize(
+            mode=mode,
+            extra_metrics=analysis.get("sustainability_metrics"),
+        ),
     }
 
     # Save JSON summary
@@ -73,10 +77,6 @@ def get_analysis_result(filepath: str, mode: str = None):
     src_dir = Path(__file__).resolve().parent
     output_path = src_dir / "output" / "summary" / f"{filename}.json"
     saved_path = summary_saver.save_summary(result_payload, output_path)
-
-    print(f"Success! Analysis mode={mode} saved to: {saved_path}")
-    if mode == "genai":
-        print(f"Number of tokens used: {result_payload.get('token_count')}")
 
     return saved_path
 
@@ -91,5 +91,6 @@ def json_to_text(file_path: str):
         topics = data.get("topics", [])
         source_file = data.get("source_file")
         mode = data.get("mode")
+        sustainability = data.get("sustainability")
         
-        return summary, keywords, topics, source_file, mode
+        return summary, keywords, topics, source_file, mode, sustainability

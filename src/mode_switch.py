@@ -55,7 +55,6 @@ def set_mode(mode: str):
 
     # Update the mode in state
     set_analysis_mode(mode)
-    print(f"Switched to mode: {get_mode_display_name(mode)}")
     
 def change_API_key():
     #Changes api key

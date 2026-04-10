@@ -1,3 +1,6 @@
 google-genai
 keybert
 sentence-transformers
+codecarbon
+ecologits[google-genai]
+psutil

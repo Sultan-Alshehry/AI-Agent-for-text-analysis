@@ -56,7 +56,6 @@ def validate_and_resolve_mode(requested_mode: str) -> AnalysisMode:
             return "genai"
         # Fallback to BERTs if Gemini key is missing and BERTs dependencies are available
         if is_keybert_available() and is_bertopic_available():
-            print("Gemini API key not set. Falling back to BERTs mode.")
             return "berts"
         raise EnvironmentError(
             "Gemini API key not set and BERTs mode dependencies (KeyBERT + BERTopic) are not available."
@@ -67,7 +66,6 @@ def validate_and_resolve_mode(requested_mode: str) -> AnalysisMode:
             return "berts"
         # Fallback to genai if BERTs dependencies are not available
         if state.API_KEY:
-            print("BERTs mode dependencies not available. Falling back to Gemini.")
             return "genai"
         raise EnvironmentError(
             "BERTs mode requires KeyBERT and BERTopic, and neither is available. Gemini API key also not set."
