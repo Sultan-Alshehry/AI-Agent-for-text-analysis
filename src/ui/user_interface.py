@@ -147,16 +147,14 @@ class Dashboard(t.Frame):
                 width=12,
                 command=lambda: change_API_key()).pack(side="left", padx=C.PADDING_MEDIUM)
 
-        info_frame = t.Frame(btn_frame, bg=C.BG_COLOR)
-        info_frame.grid(row=3, column=0, columnspan=3, pady=C.PADDING_SMALL)
-
-        t.Button(info_frame, text=C.BTN_INFO_HELP,
-                width=12,
-                command=lambda: self.master.show_frame(InfoHelp)).pack()
-
         self.content_frame = t.Frame(self, bg=C.BG_COLOR)
         self.content_frame.pack(fill="both", expand=True)
-        
+
+        # Info/Help button pinned to the upper-right corner
+        t.Button(self, text=C.BTN_INFO_HELP,
+                 command=lambda: self.master.show_frame(InfoHelp)).place(
+                     relx=1.0, rely=0.0, anchor="ne", x=-12, y=22)
+
         self.show_documents()
 
     def create_stat(self, parent, title, value):
@@ -665,7 +663,7 @@ class InfoHelp(t.Frame):
             "Disadvantages:\n"
             "• Initial model download can take a few minutes\n"
             "• Requires more local disk space and memory\n"
-            "• Summaries are less rich compared to a large language model",
+            "• No AI-generated summary — BERTs mode produces only keywords and topics",
             wrap,
         )
 
@@ -680,8 +678,12 @@ class InfoHelp(t.Frame):
             "CO₂ equivalent emissions.\n\n"
             "• EcoLogits – estimates the energy and carbon cost of API-based "
             "inference calls when using Gemini mode.\n\n"
-            "The sustainability panel shown after each analysis displays "
-            "metrics such as energy consumed (kWh) and CO₂e emissions (mg).\n\n"
+            "The sustainability panel shown after each analysis displays:\n"
+            "• Runtime (seconds)\n"
+            "• CPU usage (avg %)\n"
+            "• RAM usage (avg MB) — average of process RSS at start and end of analysis\n"
+            "• Estimated energy consumed (kWh)\n"
+            "• Estimated CO₂e emissions (mg / g / kg)\n\n"
             "Note: These sustainability metrics are estimates based on local "
             "compute tracking or API inference estimation and should be "
             "interpreted as indicative rather than exact.",
