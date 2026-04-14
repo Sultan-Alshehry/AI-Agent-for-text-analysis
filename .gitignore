@@ -1,4 +1,6 @@
+python_test/
 __pycache__/
 *.pyc
 src/output/
 user_data.json
+.gitignore
