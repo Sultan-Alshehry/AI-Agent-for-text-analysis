@@ -52,6 +52,7 @@ class AityApp(t.Tk):
         self.total_docs = t.StringVar(value="0")
         self.analysed_docs = t.StringVar(value="0")
         self.ready_to_compare_docs = t.StringVar(value="❌")
+        self.analysed_files = set()
 
         # Initialize frames 
         for F in (Dashboard, FileSelection, Analysis, Compare, InfoHelp):
@@ -220,12 +221,6 @@ class Dashboard(t.Frame):
         current = int(self.total_docs.get())
         self.total_docs.set(str(current + 1))
 
-        current = int(self.analysed_docs.get())
-        self.analysed_docs.set(str(current + 1))
-
-        if int(self.analysed_docs.get()) >= 2:
-            self.ready_compare.set("✅")
-
         # Refresh UI
         self.master.frames[FileSelection].refresh_files()
         self.master.show_frame(FileSelection)
@@ -354,7 +349,15 @@ class Analysis(t.Frame):
         display_text = format_analysis_for_ui(summary, keywords, topics, source_text=source_text, mode=mode)
         self.result_box.config(text=display_text)
         self.sustainability_box.config(text=format_sustainability_for_ui(sustainability))
-        
+
+        if self.current_filepath not in self.master.analysed_files:
+            self.master.analysed_files.add(self.current_filepath)
+
+        self.master.analysed_docs.set(str(len(self.master.analysed_files)))
+
+        if len(self.master.analysed_files) >= 2:
+            self.master.ready_to_compare_docs.set("✅")
+
         self.current_results = {
             "summary": summary,
             "keywords": keywords,
@@ -442,6 +445,9 @@ class Compare(t.Frame):
         self.clear_btn = t.Button(self, text="Clear",
                                   command=self.refresh)
         
+        self.save_btn = t.Button(self, text=C.BTN_SAVE_RESULTS,
+                                  command=self.save_comparison_results)
+        
         self.selected_files = t.Frame(self, bg=C.BG_COLOR)
         self.selected_files.pack(pady=C.PADDING_MEDIUM)
         
@@ -450,6 +456,7 @@ class Compare(t.Frame):
                              font=C.FONT_NORMAL)
         self.selected_box.pack() 
         self.compare_btn = None
+        self.current_comparison = None
         
 
     def select_document(self, file):
@@ -493,6 +500,8 @@ class Compare(t.Frame):
 
     def display_comparison(self, results):
         # Display comparison results and hide file selection UI.
+        self.current_comparison = results
+
         self.label.config(text=C.LABEL_COMPARISON_RESULTS)
         self.label.pack_forget()
 
@@ -508,6 +517,7 @@ class Compare(t.Frame):
 
         self.label.pack(pady=C.PADDING_MEDIUM)
         self.result_box.pack(pady=C.PADDING_LARGE)
+        self.save_btn.pack(pady=C.PADDING_SMALL)
         self.clear_btn.pack(pady=C.PADDING_SMALL)
 
         common_keywords = results.get("common_keywords", [])
@@ -545,6 +555,7 @@ class Compare(t.Frame):
 
         self.selected_amount = 0
         self.files_to_compare = []
+        self.save_btn.pack_forget()
         self.clear_btn.pack_forget()
 
         self.result_box.pack_forget()
@@ -573,6 +584,17 @@ class Compare(t.Frame):
                     text=filename,
                     command=lambda f=file: self.select_document(f)
                     ).pack(pady=C.PADDING_SMALL)
+            
+    
+    def save_comparison_results(self):
+        # Save comparison results to a custom location
+        if self.files_to_compare:
+            from pathlib import Path
+            names = [Path(f).stem for f in self.files_to_compare]
+            default_name = f"{'_'.join(names)}_comparison"
+        else:
+            default_name = "comparison_results"
+        UIService.handle_save_comparison(self.current_comparison, default_name)
         
         
 

@@ -3,6 +3,11 @@ from pathlib import Path
 DEFAULT_SUMMARY_PATH = (
     Path(__file__).resolve().parent / "output" / "summary" / "summary.json"
 )
+
+DEFAULT_COMPARISON_PATH = (
+    Path(__file__).resolve().parent / "output" / "comparison"
+)
+
 API_KEY = ""
 KEYBERT_INSTALLED = False
 ANALYSIS_MODE = ""

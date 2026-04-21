@@ -147,3 +147,49 @@ class UIService:
             return {"status": "error", "message": str(e)}
         except Exception as e:
             return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def handle_save_comparison(results_dict, default_filename="comparison_results"):
+        if not results_dict:
+            messagebox.showwarning("No Results", "No comparison results to save")
+            return False
+        
+        output_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=default_filename
+        )
+
+        if output_path:
+            try:
+                file_format = "txt" if output_path.endswith(".txt") else "json"
+                if file_format == "txt":
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        f.write("COMPARISON RESULTS\n\n")
+                        f.write("COMMON KEYWORDS:\n")
+                        for keywords in results_dict.get("common_keywords", []):
+                            f.write(f"- {keywords}\n")
+                        f.write("\nCOMMON TOPICS:\n")
+                        for topics in results_dict.get("common_topics", []):
+                            f.write(f"- {topics}\n")
+                        f.write("\nUNIQUE PER DOCUMENT:\n")
+                        for document in results_dict.get("per_document", []):
+                            f.write(f"\n{document['file']}:\n")
+                            f.write("\n   UNIQUE KEYWORDS:\n")
+                            for keywords in document.get("unique_keywords", []):
+                                f.write(f"  - {keywords}\n")
+                            f.write("\n   UNIQUE TOPICS:\n")
+                            for topics in document.get("unique_topics", []):
+                                f.write(f"  - {topics}\n")
+
+                else:
+                    import json
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        json.dump(results_dict, f, indent=2, ensure_ascii=False)
+                messagebox.showinfo("Success", f"Results saved to:\n{output_path}")
+                return True
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save results: {str(e)}")
+                return False
+            
+        return False

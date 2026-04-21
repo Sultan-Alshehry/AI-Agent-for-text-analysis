@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import state
 
 """
 Comparison Module
@@ -34,7 +35,7 @@ def load_results(filepath: str) -> dict:
 
     if not output_path.exists():
         raise FileNotFoundError(
-            f"No results found for '{filename}'. Analyze a document first!"
+            f"No results found for '{filename}'. Analyze the document first!"
         )
     
     with open(output_path, "r", encoding="utf-8") as f:
@@ -58,8 +59,26 @@ def compare_results(filepaths: list) -> dict:
             "unique_topics": list(all_topics[i] - common_topics),
         })
 
-    return {
+    results = {
         "common_keywords": list(common_keywords),
         "common_topics": list(common_topics),
         "per_document": per_document,
     }
+
+    __save_comparison(filepaths, results)
+
+    return results
+
+
+# Save comparison results to output/comparison
+def __save_comparison(filepaths: list, results: dict):
+    try:
+        output_dir = state.DEFAULT_COMPARISON_PATH
+        output_dir.mkdir(parents=True, exist_ok=True)
+        names = [Path(filepath).stem for filepath in filepaths]
+        filename = f"{'_'.join(names)}_comparison.json"
+        output_path = output_dir / filename
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
