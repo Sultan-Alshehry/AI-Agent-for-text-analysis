@@ -2,13 +2,28 @@ from tkinter import simpledialog, messagebox
 import state
 from ai_config import get_mode_display_name, normalize_analysis_mode, set_gemini_api_key, set_analysis_mode
 
-def set_mode(mode: str):
-    mode = normalize_analysis_mode(mode)
 
+"""
+Mode Switch Module
+------------------
+Handles switching between analysis modes (Gemini vs BERTs) in the UI.
+
+Provides functions for mode switching with API key management
+and dependency checks for BERTs mode.
+"""
+
+
+# -------------------------------------------------------------------
+# Mode switching functions
+# -------------------------------------------------------------------
+
+
+def set_mode(mode: str):
     # Switches analysis mode between 'genai' (Gemini) and 'berts' (KeyBERT + BERTopic).
     # Handles API key prompt and BERTs mode availability check.
+    mode = normalize_analysis_mode(mode)
+
     if mode == "genai":
-        # If Gemini is not set up, prompt for API key
         if not state.API_KEY:
             key = simpledialog.askstring(
                 "Gemini API Key", 
@@ -19,7 +34,6 @@ def set_mode(mode: str):
                     "Gemini required",
                     "Gemini API key required to use Gemini mode. Falling back to BERTs mode if available."
                 )
-                # Try to switch to BERTs if Gemini key is not provided
                 try:
                     import keybert
                     import bertopic
@@ -53,11 +67,11 @@ def set_mode(mode: str):
                 "Please install required packages: pip install keybert sentence-transformers bertopic"
             )
 
-    # Update the mode in state
     set_analysis_mode(mode)
-    
+
+
 def change_API_key():
-    #Changes api key
+    """Changes the API key for Gemini mode."""
     key = simpledialog.askstring(
                 "Gemini API Key", 
                 "Enter your GEMINI_API_KEY:\n\n(This will be saved for future sessions)"
@@ -71,5 +85,3 @@ def change_API_key():
     except ValueError as e:
         messagebox.showerror("Invalid API Key", str(e))
         return
-        
-    return

@@ -1,7 +1,21 @@
 from typing import Dict, List
 
 
+""" Keybert Analyzer Module
+----------------------
+Handles keyword extraction using the KeyBERT model.
+
+Responsibilities:
+- Extract keywords from text using KeyBERT
+- Filter and format keywords for consistency
+- Provide results in a structured format
+
+This module is used as a fallback when GenAI analysis fails or is unavailable.
+"""
+
+
 KEYBERT_MODEL_NAME = "all-MiniLM-L6-v2"
+
 
 # Extract keywords using KeyBERT model
 def get_keybert_keywords(text: str, top_n: int = 5) -> List[Dict[str, float]]:
@@ -15,7 +29,6 @@ def get_keybert_keywords(text: str, top_n: int = 5) -> List[Dict[str, float]]:
 
     model = KeyBERT(model=KEYBERT_MODEL_NAME)
     
-    # Extract words
     keywords = model.extract_keywords(
         text,
         keyphrase_ngram_range=(1, 1),
@@ -26,7 +39,6 @@ def get_keybert_keywords(text: str, top_n: int = 5) -> List[Dict[str, float]]:
         diversity=0.3,
     )
 
-    # Filter for meaningful words only
     filtered_keywords = []
     for kw, score in keywords:
         if (len(kw.split()) == 1 and 
@@ -36,5 +48,4 @@ def get_keybert_keywords(text: str, top_n: int = 5) -> List[Dict[str, float]]:
             
             filtered_keywords.append({"keyword": kw, "score": float(score)})
     
-    # Return top results
     return sorted(filtered_keywords, key=lambda x: x["score"], reverse=True)[:top_n]
