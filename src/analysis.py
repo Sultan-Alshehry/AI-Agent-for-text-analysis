@@ -22,27 +22,31 @@ This module bridges file input with AI processing and result storage.
 """
 
 
-def get_analysis_result(filepath: str, mode: str = None):
-    # Analyses the given file using the selected mode ('genai' or 'berts').
-    # Returns the path to the saved JSON summary.
+# -------------------------------------------------------------------
+# Core analysis
+# -------------------------------------------------------------------
+
+
+def get_analysis_result(filepath: str, mode: str | None = None) -> Path:
+
+    """
+    Analyze a file using the requested (or auto-selected) mode and
+    return the path to the saved JSON result.
+    """
 
     if mode is None:
         mode = get_analysis_mode()
 
-    # Validate mode and apply fallback if needed
     mode = validate_and_resolve_mode(mode)
 
-    # Read file content
     text = read_file(filepath)
     if not text.strip():
         raise ValueError("Input file is empty")
     run_tracker = SustainabilityRunTracker(filepath=filepath, text=text)
 
-    # Analyze with selected mode
     try:
         analysis = send_prompt_online.analyze_text(text, mode=mode)
     except EnvironmentError as e:
-        # Handle authentication errors with fallback
         error_msg = str(e).lower()
         if "invalid" in error_msg or "authentication" in error_msg:
             fallback_mode = "berts" if mode == "genai" else "genai"
@@ -57,7 +61,6 @@ def get_analysis_result(filepath: str, mode: str = None):
         else:
             raise
 
-    # Prepare result payload
     result_payload = {
         "summary": analysis.get("summary", ""),
         "keywords": analysis.get("keywords", []),
@@ -72,7 +75,6 @@ def get_analysis_result(filepath: str, mode: str = None):
         ),
     }
 
-    # Save JSON summary
     filename = Path(filepath).stem
     src_dir = Path(__file__).resolve().parent
     output_path = src_dir / "output" / "summary" / f"{filename}.json"
@@ -81,8 +83,12 @@ def get_analysis_result(filepath: str, mode: str = None):
     return saved_path
 
 
+# -------------------------------------------------------------------
+# JSON processing
+# -------------------------------------------------------------------
+
+
 def json_to_text(file_path: str):
-    # Parse JSON analysis result file and extract components.
     with open(file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
         

@@ -20,8 +20,27 @@ except ImportError:
     OfflineEmissionsTracker = None
 
 
+"""
+Sustainability Metrics Module
+-----------------------------
+Tracks and estimates environmental impact of text analysis operations.
+
+Supports energy consumption and CO2 emissions tracking using CodeCarbon
+and EcoLogits libraries, with process resource monitoring.
+"""
+
+
+# -------------------------------------------------------------------
+# Constants
+# -------------------------------------------------------------------
+
 # Default offline region for local energy estimates
 DEFAULT_COUNTRY_ISO_CODE = "FIN"
+
+
+# -------------------------------------------------------------------
+# Helper functions
+# -------------------------------------------------------------------
 
 
 # Basic input-size helper used across the run summary
@@ -99,6 +118,11 @@ def _collect_status_messages(messages: Any) -> list[str]:
     return collected
 
 
+# -------------------------------------------------------------------
+# Token and EcoLogits functions
+# -------------------------------------------------------------------
+
+
 # Normalize token metadata from Gemini responses into one shape
 def build_token_usage(usage_metadata: Any) -> dict[str, int | None]:
     if usage_metadata is None:
@@ -158,6 +182,11 @@ def extract_ecologits_metrics(impacts: Any) -> dict[str, Any]:
         "warnings": warnings,
         "errors": errors,
     }
+
+
+# -------------------------------------------------------------------
+# CodeCarbon functions
+# -------------------------------------------------------------------
 
 
 # Wrap local analysis so CodeCarbon can estimate energy and emissions for that task
@@ -261,6 +290,12 @@ def extract_codecarbon_metrics(task_data: Any) -> dict[str, Any]:
         "warnings": [],
         "errors": [],
     }
+
+
+# -------------------------------------------------------------------
+# Dataclass and UI formatting
+# -------------------------------------------------------------------
+
 
 @dataclass
 class SustainabilityRunTracker:

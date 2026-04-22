@@ -7,7 +7,26 @@ except ImportError:
     wordninja = None
 
 
+"""
+AI Analysis Formatting Module
+------------------------------
+Handles normalization, selection, and formatting of AI-generated
+analysis outputs for display in the UI, including:
+
+- Keyword and topic normalization
+- Label cleanup, deduplication, and ordering
+- Restoration of compacted keyword phrases
+- Mode-aware formatting (e.g., BERTs vs GenAI)
+- Consistent string output for summaries, keywords, and topics
+"""
+
+
 PRESERVED_ACRONYMS = {"ai", "api", "eu", "uk", "us", "llm", "llms", "ml", "nlp", "gpt", "gdpr"}
+
+
+# -------------------------------------------------------------------
+# Generic helpers
+# -------------------------------------------------------------------
 
 
 def normalize(items):
@@ -16,6 +35,24 @@ def normalize(items):
     if isinstance(items, list):
         return items
     return [items]
+
+
+def _split_topic_text(topic_text):
+    return [
+        part.strip()
+        for part in re.split(r",|\n|;", topic_text)
+        if isinstance(part, str) and part.strip()
+    ]
+
+
+def _compact_letters(value):
+    return re.sub(r"[^a-z]", "", value.lower())
+
+
+
+# -------------------------------------------------------------------
+# Topic selection
+# -------------------------------------------------------------------
 
 
 def _choose_topic_label(topic):
@@ -34,9 +71,13 @@ def _choose_topic_label(topic):
 
     keywords = topic.get("keywords", [])
     if isinstance(keywords, list):
+        
+    # Prefer multi-word phrase
         phrase = next((item for item in keywords if isinstance(item, str) and ' ' in item.strip() and item.strip()), None)
         if phrase:
             return phrase.strip()
+        
+    # Fallback to single keyword
         keyword = next((item for item in keywords if isinstance(item, str) and item.strip()), None)
         if keyword:
             return keyword.strip()
@@ -44,16 +85,9 @@ def _choose_topic_label(topic):
     return None
 
 
-def _split_topic_text(topic_text):
-    return [
-        part.strip()
-        for part in re.split(r",|\n|;", topic_text)
-        if isinstance(part, str) and part.strip()
-    ]
-
-
-def _compact_letters(value):
-    return re.sub(r"[^a-z]", "", value.lower())
+# -------------------------------------------------------------------
+# Label formatting
+# -------------------------------------------------------------------
 
 
 def _format_bert_label(label):
@@ -82,6 +116,11 @@ def _format_label_for_mode(label, mode=None):
     if mode == "berts":
         return _format_bert_label(cleaned)
     return cleaned
+
+
+# -------------------------------------------------------------------
+# Keyword restoration
+# -------
 
 
 def _restore_compact_keyword_label(label, source_text=None, max_words=5):
@@ -120,6 +159,11 @@ def _restore_compact_keyword_label(label, source_text=None, max_words=5):
     return cleaned
 
 
+# -------------------------------------------------------------------
+# Label normalization
+# -------------------------------------------------------------------
+
+
 def normalize_keyword_labels(keywords, limit=5, source_text=None, mode=None):
     labels = []
 
@@ -129,6 +173,7 @@ def normalize_keyword_labels(keywords, limit=5, source_text=None, mode=None):
         if not cleaned or cleaned in labels:
             return
         labels.append(cleaned)
+
 
     def collect(value):
         if len(labels) >= limit or value is None:
@@ -160,11 +205,13 @@ def normalize_keyword_labels(keywords, limit=5, source_text=None, mode=None):
 def normalize_topic_labels(topics, limit=5, mode=None):
     labels = []
 
+
     def append_label(label):
         cleaned = _format_label_for_mode(label, mode=mode)
         if not cleaned or cleaned.startswith("Topic ") or cleaned in labels:
             return
         labels.append(cleaned)
+
 
     def collect(value):
         if len(labels) >= limit or value is None:
@@ -191,6 +238,11 @@ def normalize_topic_labels(topics, limit=5, mode=None):
 
     collect(topics)
     return labels
+
+
+# -------------------------------------------------------------------
+# UI formatting
+# -------------------------------------------------------------------
 
 
 def stringify_analysis_items(items, limit=5, source_text=None, mode=None):
@@ -226,6 +278,7 @@ def stringify_analysis_items(items, limit=5, source_text=None, mode=None):
 
     return str(items)
 
+
 def format_analysis_for_ui(summary, keywords, topics, source_text=None, mode=None):
     keyword_labels = normalize_keyword_labels(keywords, source_text=source_text, mode=mode)
     topic_labels = normalize_topic_labels(topics, mode=mode)
@@ -236,7 +289,6 @@ def format_analysis_for_ui(summary, keywords, topics, source_text=None, mode=Non
     else:
         keywords_text = stringify_analysis_items(keywords, source_text=source_text, mode=mode)
 
-    # Format topics as bullet list
     topics_text = "No topics found"
     if topic_labels:
         topics_text = "\n".join(f"- {label}" for label in topic_labels)

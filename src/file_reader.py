@@ -19,19 +19,15 @@ Provides both file validation and content extraction.
 def validate_and_read_file(file_path: str) -> tuple[bool, str]:
     # Validate and attempt to read a file in one operation.
     try:
-        # Validate file exists
         path = Path(file_path)
         if not path.exists():
             return False, f"File not found: {file_path}"
         
-        # Validate file format
         if path.suffix.lower() not in [".txt", ".pdf"]:
             return False, f"Unsupported file type: {path.suffix}. Please use .txt or .pdf"
         
-        # Try to read file
         content = read_file(file_path)
         
-        # Ensure file has content
         if not content.strip():
             return False, "File is empty or contains no readable text"
         
@@ -42,7 +38,6 @@ def validate_and_read_file(file_path: str) -> tuple[bool, str]:
 
 
 def validate_file(file_path: str) -> bool:
-    # Check if file exists and has supported format (.txt or .pdf)."""
     path = Path(file_path)
     if not path.exists():
         return False
@@ -50,7 +45,6 @@ def validate_file(file_path: str) -> bool:
 
 
 def read_file(file_path: str) -> str:
-    # Read and extract text from a file.
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
@@ -65,12 +59,12 @@ def read_file(file_path: str) -> str:
 
     raise ValueError(f"Unsupported file type: {file_type}")
 
+
 def __read_txt(path: Path) -> str:
-    # Extract text from a plain text file with UTF-8 encoding.
     return path.read_text(encoding="utf-8")
 
+
 def __read_pdf(path: Path) -> str:
-    # Extract text from all pages in a PDF file using PyPDF2
     try:
         from PyPDF2 import PdfReader
     except ImportError as exc:
@@ -90,9 +84,3 @@ def __read_pdf(path: Path) -> str:
     text = re.sub(r"(?<=[a-z])\n(?=[a-z])", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text
-
-def validate_file(file_path: str) -> bool:
-    path = Path(file_path)
-    if not path.exists():
-        return False
-    return path.suffix.lower() in (".txt", ".pdf")

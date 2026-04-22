@@ -7,11 +7,30 @@ from analysis_formatter import normalize_keyword_labels, normalize_topic_labels,
 from file_reader import read_file
 
 
-def _ensure_parent_dir(path: Path) -> None:
+"""
+Summary Saver Module
+--------------------
+Handles saving analysis results to files in JSON or text format.
 
+Supports formatted output with normalized labels and directory creation.
+"""
+
+
+# -------------------------------------------------------------------
+# Helper functions
+# -------------------------------------------------------------------
+
+
+def _ensure_parent_dir(path: Path) -> None:
+    # Ensure the parent directory of the given path exists.
     parent = path.parent
     if not parent.exists():
         parent.mkdir(parents=True, exist_ok=True)
+
+
+# -------------------------------------------------------------------
+# Main save function
+# -------------------------------------------------------------------
 
 
 def save_summary(
@@ -21,7 +40,17 @@ def save_summary(
     indent: int = 2,
     format: str = "json",
 ) -> Path:
-
+    """Save analysis summary to a file in JSON or text format.
+    
+    Args:
+        summary: The analysis result dictionary
+        output_path: Path to save the file (defaults to state.DEFAULT_SUMMARY_PATH)
+        indent: JSON indentation level
+        format: Output format ('json' or 'txt')
+    
+    Returns:
+        Path to the saved file
+    """
     path = Path(output_path) if output_path is not None else state.DEFAULT_SUMMARY_PATH
     _ensure_parent_dir(path)
 
@@ -48,6 +77,5 @@ def save_summary(
             f.write(f"Topics: {topics_text}\n")
         else:  
             json.dump(summary, f, indent=indent, ensure_ascii=False)
-            f.write("\n")
 
     return path
