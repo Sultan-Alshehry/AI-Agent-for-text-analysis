@@ -1,0 +1,102 @@
+
+from pathlib import Path
+import json
+import summary_saver
+import send_prompt_online
+from ai_config import get_analysis_mode, validate_and_resolve_mode
+from file_reader import read_file
+from sustainability_metrics import SustainabilityRunTracker
+import state
+
+
+"""
+Text Analysis Module
+--------------------
+Core analysis module that orchestrates the text analysis pipeline:
+- Reads files (TXT, PDF)
+- Selects and validates analysis mode (Gemini or BERTs)
+- Executes analysis with fallback handling
+- Saves results to JSON
+
+This module bridges file input with AI processing and result storage.
+"""
+
+
+# -------------------------------------------------------------------
+# Core analysis
+# -------------------------------------------------------------------
+
+
+def get_analysis_result(filepath: str, mode: str | None = None) -> Path:
+
+    """
+    Analyze a file using the requested (or auto-selected) mode and
+    return the path to the saved JSON result.
+    """
+
+    if mode is None:
+        mode = get_analysis_mode()
+
+    mode = validate_and_resolve_mode(mode)
+
+    text = read_file(filepath)
+    if not text.strip():
+        raise ValueError("Input file is empty")
+    run_tracker = SustainabilityRunTracker(filepath=filepath, text=text)
+
+    try:
+        analysis = send_prompt_online.analyze_text(text, mode=mode)
+    except EnvironmentError as e:
+        error_msg = str(e).lower()
+        if "invalid" in error_msg or "authentication" in error_msg:
+            fallback_mode = "berts" if mode == "genai" else "genai"
+            try:
+                fallback_mode = validate_and_resolve_mode(fallback_mode)
+                analysis = send_prompt_online.analyze_text(text, mode=fallback_mode)
+                mode = fallback_mode
+            except Exception as fallback_error:
+                raise EnvironmentError(
+                    f"Analysis failed with {mode} and fallback also failed: {fallback_error}"
+                ) from e
+        else:
+            raise
+
+    result_payload = {
+        "summary": analysis.get("summary", ""),
+        "keywords": analysis.get("keywords", []),
+        "topics": analysis.get("topics", []),
+        "token_count": analysis.get("token_count"),
+        "token_usage": analysis.get("token_usage"),
+        "mode": mode,
+        "source_file": str(Path(filepath).resolve()),
+        "sustainability": run_tracker.finalize(
+            mode=mode,
+            extra_metrics=analysis.get("sustainability_metrics"),
+        ),
+    }
+
+    filename = Path(filepath).stem
+    src_dir = Path(__file__).resolve().parent
+    output_path = src_dir / "output" / "summary" / f"{filename}.json"
+    saved_path = summary_saver.save_summary(result_payload, output_path)
+
+    return saved_path
+
+
+# -------------------------------------------------------------------
+# JSON processing
+# -------------------------------------------------------------------
+
+
+def json_to_text(file_path: str):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        
+        summary = data.get("summary", "")
+        keywords = data.get("keywords", [])
+        topics = data.get("topics", [])
+        source_file = data.get("source_file")
+        mode = data.get("mode")
+        sustainability = data.get("sustainability")
+        
+        return summary, keywords, topics, source_file, mode, sustainability
