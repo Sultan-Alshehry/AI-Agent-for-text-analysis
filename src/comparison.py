@@ -9,8 +9,13 @@ Compares keywords and topics between multiple analyzed documents.
 
 """
 
-# Convert value to list.
+# -------------------------------------------------------------------
+# Helper functions
+# -------------------------------------------------------------------
+
+
 def __parse_list(value) -> list:
+    # Convert value to list.
     if value is None:
         return []
     if isinstance(value, str):
@@ -27,8 +32,13 @@ def __parse_list(value) -> list:
     return []
 
 
-# Load saved JSON for a document.
+# -------------------------------------------------------------------
+# Main functions
+# -------------------------------------------------------------------
+
+
 def load_results(filepath: str) -> dict:
+    # Load saved JSON for a document.
     filename = Path(filepath).stem
     src_dir = Path(__file__).resolve().parent
     output_path = src_dir / "output" / "summary" / f"{filename}.json"
@@ -42,8 +52,8 @@ def load_results(filepath: str) -> dict:
         return json.load(f)
 
 
-# Compare keywords and topics between documents.
 def compare_results(filepaths: list) -> dict:
+    # Compare keywords and topics between documents.
     all_results = [load_results(filepath) for filepath in filepaths]
 
     all_keywords = [set(keywords.lower() for keywords in __parse_list(r.get("keywords", ""))) for r in all_results]

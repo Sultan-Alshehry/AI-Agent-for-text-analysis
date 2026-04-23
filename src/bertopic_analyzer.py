@@ -3,6 +3,25 @@ from typing import Any, Dict, List, Tuple
 import re
 
 
+"""
+Bertopic Analyzer Module
+-----------------------------------
+Provides helper functions for extracting high-quality
+topics from scientific and academic text using BERTopic and
+sentence-transformer embeddings.
+
+This module focuses on:
+- Loading and caching scientific embedding models
+- Cleaning and pre-processing academic text
+- Chunking text into topic-appropriate segments
+- Ranking and scoring topic terms for clarity and relevance
+- Producing structured topic outputs 
+
+Designed to improve topic quality and interpretability in
+BERT-based topic modeling pipelines.
+"""
+
+
 SCIENTIFIC_EMBEDDING_CANDIDATES = (
     ("allenai/specter2_base", "SPECTER2"),
     ("allenai/specter", "SPECTER"),
