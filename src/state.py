@@ -18,6 +18,9 @@ DEFAULT_SUMMARY_PATH = (
     Path(__file__).resolve().parent / "output" / "summary" / "summary.json"
 )
 
+DEFAULT_COMPARISON_PATH = (
+    Path(__file__).resolve().parent / "output" / "comparison"
+)
 
 # -------------------------------------------------------------------
 # Runtime state
