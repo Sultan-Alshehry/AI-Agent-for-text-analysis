@@ -37,26 +37,46 @@ cd src
 
 3. Create a python virtual environment
 
-Windows: `python -m venv venv`
+Windows:
 
-MacOs/Linux: `python3 -m venv venv`
+```
+python -m venv venv
+```
 
+MacOs/Linux:
+
+```
+python3 -m venv venv
+
+```
 
 4. Activate the virtual environment
 
-Windows: `venv\Scripts\activate.bat`
+Windows: 
 
-MacOs/Linux: `source venv/bin/activate`
+```
+venv\Scripts\activate.bat
 
+```
+
+MacOs/Linux:
+
+```
+source venv/bin/activate
+```
 
 5. Download dependencies
 
-`pip install -r requirements.txt`
+```
+pip install -r requirements.txt
 
+```
 
 6. Run the program
 
-`python main.py`
+```
+python main.py
 
+```
 
 7. Enjoy!
