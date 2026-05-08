@@ -1,6 +1,8 @@
 google-genai
+PyPDF2
 keybert
 sentence-transformers
+bertopic
 codecarbon
 ecologits[google-genai]
 psutil
